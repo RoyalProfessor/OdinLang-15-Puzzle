@@ -117,6 +117,18 @@ ButtonClickRec :: proc(rec: rl.Rectangle, line_thick: f32 = 0, mouse_click: rl.M
     }
 }
 
+DrawCenterText :: proc(font: rl.Font, rec: rl.Rectangle, text: cstring, fontSize, fontSpacing: f32, color: rl.Color = rl.BLACK) {
+    fontWidth := rl.MeasureTextEx(font, text, fontSize, fontSpacing)
+    center_x := rec.x + (rec.width/2)
+    center_y := rec.y + (rec.height/2)
+    offset_x := fontWidth[0]/2
+    offset_y := fontWidth[1]/2
+    center_x = center_x - offset_x
+    center_y = center_y - offset_y
+    v2 := rl.Vector2{center_x, center_y}
+    rl.DrawTextEx(font, text, v2, fontSize, fontSpacing, color)
+}
+
 create_square_raw :: proc(x, y, l, w: f32, num : int, color: rl.Color, state : bool = true) -> (SquareEntity) {
     pos := Position{x, y, true}
     dim := Dimension{l, w, true}
