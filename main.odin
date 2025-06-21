@@ -36,6 +36,9 @@ num_buf : [4]byte
 
 
 main :: proc() {
+    context.logger = log.create_console_logger()
+    log.info("Program started")
+
     rl.SetConfigFlags({.VSYNC_HINT})
     rl.InitWindow(WINDOW_SIZE, WINDOW_SIZE, "15 Puzzle")
 
@@ -87,7 +90,7 @@ main :: proc() {
             rec := rl.Rectangle{f32(pos.x), f32(pos.y), f32(dim.width), f32(dim.length)}
             rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE_THICKNESS, SQUARE_COLOR)
             if ButtonClickRec(rec, SQUARE_OUTLINE_THICKNESS) {
-                fmt.println("Click")
+                log.info("Click")
             }
 
         }
@@ -95,6 +98,8 @@ main :: proc() {
         rl.EndDrawing()
 
     }
+
+    log.destroy_console_logger(context.logger)
 }
 
 ButtonClickRec :: proc(rec: rl.Rectangle, line_thick: f32 = 0, mouse_click: rl.MouseButton = rl.MouseButton.LEFT) -> (bool) {
