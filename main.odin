@@ -85,12 +85,12 @@ main :: proc() {
         for s in squares.arr {
             pos := retrieve_entity(s.position_index, positions.arr)
             dim := retrieve_entity(s.dimension_index, dimensions.arr)
-            // num := retrieve_entity(s.number_index, numbers.arr)
+            num := retrieve_entity(s.number_index, numbers.arr)
             // cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], num.num))
             rec := rl.Rectangle{f32(pos.x), f32(pos.y), f32(dim.width), f32(dim.length)}
             rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE_THICKNESS, SQUARE_COLOR)
             if ButtonClickRec(rec, SQUARE_OUTLINE_THICKNESS) {
-                log.info("Click")
+                log.info(num, "Clicked")
             }
 
         }
@@ -120,14 +120,16 @@ ButtonClickRec :: proc(rec: rl.Rectangle, line_thick: f32 = 0, mouse_click: rl.M
 create_square_raw :: proc(x, y, l, w: f32, num : int, color: rl.Color, state : bool = true) -> (SquareEntity) {
     pos := Position{x, y, true}
     dim := Dimension{l, w, true}
+    center := Position{x+(w/2), y+(l/2), true}
     sqr_num := SquareNumber{num, true}
     vis := Visibility{state, true}
     pos_index := insert_entity(pos, &positions.arr)
     dim_index := insert_entity(dim, &dimensions.arr)
+    center_index := insert_entity(center, &positions.arr)
     num_index := insert_entity(sqr_num, &numbers.arr)
     vis_index := insert_entity(vis, &vis_man.arr)
     color_index := insert_color(color, &colors.arr)
-    square := SquareEntity{pos_index, dim_index, num_index, vis_index, color_index, true}
+    square := SquareEntity{pos_index, dim_index, center_index, num_index, vis_index, color_index, true}
     return square
 }
 
@@ -263,6 +265,7 @@ VisibilityManager :: struct {
 SquareEntity :: struct {
     position_index : int,
     dimension_index : int,
+    center_index : int,
     number_index : int,
     visibility_index : int,
     color_index : int,
