@@ -22,6 +22,9 @@ ROW_SIZE :: 4
 COLUMN_SIZE :: 4
 SQUARE_COLOR :: rl.LIGHTGRAY
 GRID_COLOR :: rl.DARKGRAY
+FONT_SIZE :: f32(18)
+FONT_SPACING :: f32(1)
+FONT_COLOR :: rl.BLACK
 
 //Globals
 squares : SquareManager
@@ -59,11 +62,6 @@ main :: proc() {
         square := create_square(pos, dim, num, SQUARE_COLOR, {true, true})
         index := insert_entity(square, &squares.arr)
     }
-
-    s := squares.arr[0]
-    num := retrieve_entity(s.number_index, numbers.arr)
-    cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], num.num))
-    rec := square_to_rec(s)
     
     for !rl.WindowShouldClose() {
 
@@ -82,17 +80,19 @@ main :: proc() {
         grid_rec := rl.Rectangle{grid_pos.x, grid_pos.y, grid_dim.width, grid_dim.length}
         rl.DrawRectangleRec(grid_rec, grid_color)
 
+        font := rl.GetFontDefault()
+
         for s in squares.arr {
             pos := retrieve_entity(s.position_index, positions.arr)
             dim := retrieve_entity(s.dimension_index, dimensions.arr)
             num := retrieve_entity(s.number_index, numbers.arr)
-            // cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], num.num))
-            rec := rl.Rectangle{f32(pos.x), f32(pos.y), f32(dim.width), f32(dim.length)}
+            cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], num.num))
+            rec := rl.Rectangle{pos.x, pos.y, dim.width, dim.length}
             rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE_THICKNESS, SQUARE_COLOR)
+            DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
             if ButtonClickRec(rec, SQUARE_OUTLINE_THICKNESS) {
-                log.info(num, "Clicked")
+                log.info(s, "Clicked")
             }
-
         }
 
         rl.EndDrawing()
