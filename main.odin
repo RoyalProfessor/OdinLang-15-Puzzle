@@ -12,16 +12,16 @@ import "core:log"
 //Constants
 WINDOW_SIZE :: 1000
 CELL_SIZE :: 20
-SQUARE_OUTLINE_THICKNESS :: f32(.5)
+SQUARE_SPACING :: f32(.5)
 CANVAS_WIDTH :: CELL_SIZE * COLUMN_SIZE
-CANVAS_LENGTH :: CELL_SIZE * ROW_SIZE
-CANVAS_AREA :: CANVAS_WIDTH * CANVAS_LENGTH
+CANVAS_HEIGHT :: CELL_SIZE * ROW_SIZE
+CANVAS_AREA :: CANVAS_WIDTH * CANVAS_HEIGHT
 ZOOM_MULTIPLIER :: 12
 NUM_OF_SQUARES :: ROW_SIZE * COLUMN_SIZE
 ROW_SIZE :: 4
 COLUMN_SIZE :: 4
-SQUARE_COLOR :: rl.LIGHTGRAY
-GRID_COLOR :: rl.DARKGRAY
+SQUARE_COLOR :: rl.Color{173,216,230,255}
+GRID_COLOR :: rl.Color{212,188,114,255}
 FONT_SIZE :: f32(18)
 FONT_SPACING :: f32(1)
 FONT_COLOR :: rl.BLACK
@@ -44,7 +44,7 @@ main :: proc() {
 
     grid_color_i := insert_color(GRID_COLOR, &colors.arr)
     square_color_i := insert_color(SQUARE_COLOR, &colors.arr)
-    grid_render := Renderable{grid_color_i, {0, 0}, CANVAS_WIDTH, CANVAS_LENGTH, true, true}
+    grid_render := Renderable{grid_color_i, {0, 0}, CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, true, true}
 
     grid : GridEntity
     grid = create_grid(grid_render, COLUMN_SIZE, ROW_SIZE, CELL_SIZE)
@@ -63,9 +63,9 @@ main :: proc() {
             visibility = true
         }
         pos := grid.cell_positions[i]
-        pos.x += SQUARE_OUTLINE_THICKNESS
-        pos.y += SQUARE_OUTLINE_THICKNESS
-        square_render := Renderable{square_color_i, pos, grid.cell_size - SQUARE_OUTLINE_THICKNESS, grid.cell_size - SQUARE_OUTLINE_THICKNESS, visibility, true}
+        pos.x += SQUARE_SPACING
+        pos.y += SQUARE_SPACING
+        square_render := Renderable{square_color_i, pos, grid.cell_size - SQUARE_SPACING, grid.cell_size - SQUARE_SPACING, visibility, true}
         square_render_i := insert_entity(square_render, &renderable.arr)
         square_entity := SquareEntity{square_render_i, rand_arr[i], {}, true}
         index := insert_entity(square_entity, &squares.arr)
@@ -98,7 +98,7 @@ main :: proc() {
                     rec := renderable_to_rectangle(square_render)
                     rl.DrawRectangleRec(rec, SQUARE_COLOR)
                     DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
-                    if ButtonClickRec(square_render, SQUARE_OUTLINE_THICKNESS) {
+                    if ButtonClickRec(square_render) {
                         log.info(s, "Clicked")
                     }
                 }
