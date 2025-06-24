@@ -63,7 +63,9 @@ main :: proc() {
             visibility = true
         }
         pos := grid.cell_positions[i]
-        square_render := Renderable{square_color_i, pos, grid.cell_size, grid.cell_size, visibility, true}
+        pos.x += SQUARE_OUTLINE_THICKNESS
+        pos.y += SQUARE_OUTLINE_THICKNESS
+        square_render := Renderable{square_color_i, pos, grid.cell_size - SQUARE_OUTLINE_THICKNESS, grid.cell_size - SQUARE_OUTLINE_THICKNESS, visibility, true}
         square_render_i := insert_entity(square_render, &renderable.arr)
         square_entity := SquareEntity{square_render_i, rand_arr[i], {}, true}
         index := insert_entity(square_entity, &squares.arr)
@@ -94,7 +96,7 @@ main :: proc() {
                 cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.number))
                 if s.active {
                     rec := renderable_to_rectangle(square_render)
-                    rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE_THICKNESS, SQUARE_COLOR)
+                    rl.DrawRectangleRec(rec, SQUARE_COLOR)
                     DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
                     if ButtonClickRec(square_render, SQUARE_OUTLINE_THICKNESS) {
                         log.info(s, "Clicked")
