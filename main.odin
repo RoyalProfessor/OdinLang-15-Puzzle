@@ -28,10 +28,7 @@ FONT_COLOR :: rl.BLACK
 
 //Globals
 squares : SquareManager
-positions : PositionManager
-dimensions : DimensionManager
-numbers : NumberManager
-vis_man : VisibilityManager
+renderable : RenderManager
 colors : ColorManager
 
 //Buffers
@@ -45,22 +42,25 @@ main :: proc() {
     rl.SetConfigFlags({.VSYNC_HINT})
     rl.InitWindow(WINDOW_SIZE, WINDOW_SIZE, "15 Puzzle")
 
+    grid_color_i := insert_color(GRID_COLOR, &colors.arr)
+    square_color_i := insert_color(SQUARE_COLOR, &colors.arr)
+    grid_render := Renderable{grid_color_i, {0, 0}, CANVAS_WIDTH, CANVAS_LENGTH, true, true}
+
     grid : GridEntity
-    grid = create_grid(0, 0, CELL_SIZE * COLUMN_SIZE, CELL_SIZE * ROW_SIZE, NUM_OF_SQUARES, CELL_SIZE, COLUMN_SIZE, ROW_SIZE, GRID_COLOR)
+    grid = create_grid(grid_render, COLUMN_SIZE, ROW_SIZE, CELL_SIZE)
 
     rand_arr : [NUM_OF_SQUARES]int
-
     for i := 0; i < NUM_OF_SQUARES; i += 1 {
         rand_arr[i] = i
     }
     rand.shuffle(rand_arr[:])
 
-    for i := 0; i < len(rand_arr); i += 1 {
-        pos := retrieve_entity(grid.cell_position_index[i], positions.arr)
-        dim := Dimension{CELL_SIZE, CELL_SIZE, true}
-        num := SquareNumber{rand_arr[i], true}
-        square := create_square(pos, dim, num, SQUARE_COLOR, {true, true})
-        index := insert_entity(square, &squares.arr)
+    for i := 0; i < NUM_OF_SQUARES; i += 1 {
+        pos := grid.cell_positions[i]
+        square_render := Renderable{square_color_i, pos, grid.cell_size, grid.cell_size, true, true}
+        square_render_i := insert_entity(square_render, &renderable.arr)
+        square_entity := SquareEntity{square_render_i, rand_arr[i], {}, true}
+        index := insert_entity(square_entity, &squares.arr)
     }
     
     for !rl.WindowShouldClose() {
@@ -74,24 +74,24 @@ main :: proc() {
         }
         rl.BeginMode2D(camera)
 
-        grid_pos := retrieve_entity(grid.position_index, positions.arr)
-        grid_dim := retrieve_entity(grid.dimension_index, dimensions.arr)
-        grid_color := retrieve_color(grid.color_index, colors)
-        grid_rec := rl.Rectangle{grid_pos.x, grid_pos.y, grid_dim.width, grid_dim.length}
-        rl.DrawRectangleRec(grid_rec, grid_color)
-
         font := rl.GetFontDefault()
 
+        //Draw Grid
+        grid_render := retrieve_entity(grid.render_index, renderable.arr)
+        grid_rec := renderable_to_rectangle(grid_render)
+        rl.DrawRectangleRec(grid_rec, colors.arr[grid_render.color_index])
+
+        //Draw Squares
         for s in squares.arr {
-            pos := retrieve_entity(s.position_index, positions.arr)
-            dim := retrieve_entity(s.dimension_index, dimensions.arr)
-            num := retrieve_entity(s.number_index, numbers.arr)
-            cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], num.num))
-            rec := rl.Rectangle{pos.x, pos.y, dim.width, dim.length}
-            rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE_THICKNESS, SQUARE_COLOR)
-            DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
-            if ButtonClickRec(rec, SQUARE_OUTLINE_THICKNESS) {
-                log.info(s, "Clicked")
+            square_render := retrieve_entity(s.render_index, renderable.arr)
+            cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.number))
+            if s.active {
+                rec := renderable_to_rectangle(square_render)
+                rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE_THICKNESS, SQUARE_COLOR)
+                DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
+                if ButtonClickRec(square_render, SQUARE_OUTLINE_THICKNESS) {
+                    log.info(s, "Clicked")
+                }
             }
         }
 
@@ -102,14 +102,14 @@ main :: proc() {
     log.destroy_console_logger(context.logger)
 }
 
-ButtonClickRec :: proc(rec: rl.Rectangle, line_thick: f32 = 0, mouse_click: rl.MouseButton = rl.MouseButton.LEFT) -> (bool) {
+ButtonClickRec :: proc(render: Renderable, line_thick: f32 = 0, mouse_click: rl.MouseButton = rl.MouseButton.LEFT) -> (bool) {
     mouse_pos := rl.GetMousePosition()
     mouse_x := mouse_pos[0]
     mouse_y := mouse_pos[1]
-    lower_x := (rec.x + line_thick) * ZOOM_MULTIPLIER
-    upper_x := (rec.x * ZOOM_MULTIPLIER) + ((rec.width - line_thick) * ZOOM_MULTIPLIER)
-    lower_y := (rec.y + line_thick) * ZOOM_MULTIPLIER
-    upper_y := (rec.y * ZOOM_MULTIPLIER) + ((rec.height - line_thick) * ZOOM_MULTIPLIER)
+    lower_x := (render.x + line_thick) * ZOOM_MULTIPLIER
+    upper_x := (render.x * ZOOM_MULTIPLIER) + ((render.width - line_thick) * ZOOM_MULTIPLIER)
+    lower_y := (render.y + line_thick) * ZOOM_MULTIPLIER
+    upper_y := (render.y * ZOOM_MULTIPLIER) + ((render.height - line_thick) * ZOOM_MULTIPLIER)
     if mouse_x >= lower_x && mouse_x <= upper_x && mouse_y >= lower_y && mouse_y <= upper_y && rl.IsMouseButtonPressed(mouse_click) == true {
         return true
     } else {
@@ -129,73 +129,54 @@ DrawCenterText :: proc(font: rl.Font, rec: rl.Rectangle, text: cstring, fontSize
     rl.DrawTextEx(font, text, v2, fontSize, fontSpacing, color)
 }
 
-create_square_raw :: proc(x, y, l, w: f32, num : int, color: rl.Color, state : bool = true) -> (SquareEntity) {
-    pos := Position{x, y, true}
-    dim := Dimension{l, w, true}
-    center := Position{x+(w/2), y+(l/2), true}
-    sqr_num := SquareNumber{num, true}
-    vis := Visibility{state, true}
-    pos_index := insert_entity(pos, &positions.arr)
-    dim_index := insert_entity(dim, &dimensions.arr)
-    center_index := insert_entity(center, &positions.arr)
-    num_index := insert_entity(sqr_num, &numbers.arr)
-    vis_index := insert_entity(vis, &vis_man.arr)
+create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: DirectionSet, ) -> (SquareEntity) {
     color_index := insert_color(color, &colors.arr)
-    square := SquareEntity{pos_index, dim_index, center_index, num_index, vis_index, color_index, true}
+    render := Renderable{color_index, {x, y}, w, h, visiblity, true}
+    render_index := insert_entity(render, &renderable.arr)
+    
+    square := SquareEntity{render_index, num, direction, true}
+    square_index := insert_entity(square, &squares.arr)
     return square
 }
 
-create_square_from_struct :: proc(pos : Position, dim : Dimension, num : SquareNumber, color: rl.Color, vis : Visibility) -> (SquareEntity) {
-    return create_square_raw(pos.x, pos.y, dim.length, dim.width, num.num, color, vis.state)
+create_square_from_struct :: proc(render: Renderable, square: SquareEntity, colors: ColorManager) -> (SquareEntity) {
+    return create_square_raw(render.x, render.y, render.width, render.height, colors.arr[render.color_index], render.visibility, square.number, square.direction)
 }
 
 create_square :: proc{create_square_raw, create_square_from_struct}
 
-square_to_rec :: proc(square: SquareEntity) -> (rl.Rectangle) {
-    pos := retrieve_entity(square.position_index, positions.arr)
-    dim := retrieve_entity(square.dimension_index, dimensions.arr)
-    rec := rl.Rectangle{f32(pos.x), f32(pos.y), f32(dim.width), f32(dim.length)}
-    return rec
+renderable_to_rectangle :: proc(render: Renderable) -> (rl.Rectangle) {
+    return rl.Rectangle{render.x, render.y, render.width, render.height}
 }
 
-create_grid_raw :: proc(grid_x, grid_y, grid_l, grid_w: f32, cell_num, cell_size, column_size, row_size: int, grid_color: rl.Color) -> (GridEntity) {
-    grid_pos := Position{grid_x, grid_y, true}
-    grid_dim := Dimension{grid_l, grid_w, true}
-    grid_pos_index := insert_entity(grid_pos, &positions.arr)
-    grid_dim_index := insert_entity(grid_dim, &dimensions.arr)
-    grid_color_index := insert_color(grid_color, &colors.arr)
+create_grid_raw :: proc(x, y, width, height: f32, color: rl.Color, visibility: bool, column_size, row_size: int, cell_size: f32) -> (GridEntity) {
+    color_i := insert_color(color, &colors.arr)
+    render := Renderable{color_i, {x, y}, width, height, visibility, true}
+    render_i := insert_entity(render, &renderable.arr)
     grid : GridEntity
-    grid.position_index = grid_pos_index
-    grid.dimension_index = grid_dim_index
-    grid.number_of_cells = cell_num
-    grid.color_index = grid_color_index
+    grid.render_index = render_i
+    grid.column_size = column_size
+    grid.row_size = row_size
+    grid.cell_size = cell_size
 
-    y: f32 = 0
+    grid_y: f32 = 0
     for r := 0; r < row_size; r += 1 {
-        x : f32 = 0
+        grid_x : f32 = 0
         for c := 0; c < column_size; c += 1 {
-            pos := Position{x, y, true}
-            visiblity := false
-            pos_index := insert_entity(pos, &positions.arr)
-            append(&grid.cell_position_index, pos_index)
-            x += f32(cell_size)
+            pos := Position{grid_x, grid_y}
+            pos_i := append_soa(&grid.cell_positions, pos)
+            grid_x += cell_size
         }
-        y += f32(cell_size)
+        grid_y += cell_size
     }
     return grid
 }
 
-create_grid_struct :: proc(pos: Position, dim: Dimension, cell_num, cell_size, column_size, row_size: int, color: rl.Color) -> (GridEntity) {
-    return create_grid_raw(pos.x, pos.y, dim.length, dim.width, cell_num, cell_size, column_size, row_size, color)
+create_grid_struct :: proc(render: Renderable, column_size, row_size: int, cell_size: f32) -> (GridEntity) {
+    return create_grid_raw(render.x, render.y, render.width, render.height, retrieve_color(render.color_index, colors), render.visibility, column_size, row_size, cell_size)
 }
 
 create_grid :: proc{create_grid_raw, create_grid_struct}
-
-populate_grid :: proc(grid : GridEntity) {
-    for s in grid.cell_position_index {
-
-    }
-}
 
 insert_entity :: proc(val: $T, arr : ^#soa[dynamic]T) -> (index: int) {
     for i := 0; i < len(arr); i += 1 {
@@ -236,51 +217,27 @@ ColorManager :: struct {
     arr : [dynamic]rl.Color
 }
 
-SquareNumber :: struct {
-    num : int,
-    active : bool
-}
-
-NumberManager :: struct {
-    arr : #soa[dynamic]SquareNumber
-}
-
 Position :: struct {
-    x : f32,
-    y : f32,
-    active : bool
+    x, y: f32,
 }
 
-PositionManager :: struct {
-    arr : #soa[dynamic]Position
-}
-
-Dimension :: struct {
-    length : f32,
+Renderable :: struct {
+    color_index : int,
+    using position: Position,
     width : f32,
+    height : f32,
+    visibility : bool,
     active : bool
 }
 
-DimensionManager :: struct {
-    arr : #soa[dynamic]Dimension
-}
-
-Visibility :: struct {
-    state : bool,
-    active : bool
-}
-
-VisibilityManager :: struct {
-    arr : #soa[dynamic]Visibility
+RenderManager :: struct {
+    arr : #soa[dynamic]Renderable
 }
 
 SquareEntity :: struct {
-    position_index : int,
-    dimension_index : int,
-    center_index : int,
-    number_index : int,
-    visibility_index : int,
-    color_index : int,
+    render_index : int,
+    number : int,
+    direction : DirectionSet,
     active : bool
 }
 
@@ -289,14 +246,13 @@ SquareManager :: struct {
 }
 
 GridEntity :: struct {
-    position_index : int,
-    dimension_index : int,
-    number_of_cells : int,
-    color_index : int,
-    cell_position_index : [dynamic]int,
+    render_index : int,
+    column_size : int,
+    row_size : int,
+    cell_size : f32,
+    cell_positions : #soa[dynamic]Position,
 }
 
-WindowEntity :: struct {
-
-}
+Direction :: enum{North, East, South, West}
+DirectionSet :: bit_set[Direction]
 
