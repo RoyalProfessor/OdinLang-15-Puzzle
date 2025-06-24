@@ -56,8 +56,14 @@ main :: proc() {
     rand.shuffle(rand_arr[:])
 
     for i := 0; i < NUM_OF_SQUARES; i += 1 {
+        visibility : bool
+        if rand_arr[i] == 0 {
+            visibility = false
+        } else {
+            visibility = true
+        }
         pos := grid.cell_positions[i]
-        square_render := Renderable{square_color_i, pos, grid.cell_size, grid.cell_size, true, true}
+        square_render := Renderable{square_color_i, pos, grid.cell_size, grid.cell_size, visibility, true}
         square_render_i := insert_entity(square_render, &renderable.arr)
         square_entity := SquareEntity{square_render_i, rand_arr[i], {}, true}
         index := insert_entity(square_entity, &squares.arr)
