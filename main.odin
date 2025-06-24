@@ -32,7 +32,7 @@ renderable : RenderManager
 colors : ColorManager
 
 //Buffers
-num_buf : [4]byte
+num_buf : [8]byte
 
 
 main :: proc() {
@@ -83,14 +83,16 @@ main :: proc() {
 
         //Draw Squares
         for s in squares.arr {
-            square_render := retrieve_entity(s.render_index, renderable.arr)
-            cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.number))
-            if s.active {
-                rec := renderable_to_rectangle(square_render)
-                rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE_THICKNESS, SQUARE_COLOR)
-                DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
-                if ButtonClickRec(square_render, SQUARE_OUTLINE_THICKNESS) {
-                    log.info(s, "Clicked")
+            if renderable.arr[s.render_index].visibility == true {
+                square_render := retrieve_entity(s.render_index, renderable.arr)
+                cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.number))
+                if s.active {
+                    rec := renderable_to_rectangle(square_render)
+                    rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE_THICKNESS, SQUARE_COLOR)
+                    DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
+                    if ButtonClickRec(square_render, SQUARE_OUTLINE_THICKNESS) {
+                        log.info(s, "Clicked")
+                    }
                 }
             }
         }
