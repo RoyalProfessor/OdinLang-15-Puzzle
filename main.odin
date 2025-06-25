@@ -63,26 +63,23 @@ main :: proc() {
     rand.shuffle(rand_arr[:])
 
     for i := 0; i < NUM_OF_SQUARES; i += 1 {
-        visibility : bool
-        if rand_arr[i] == 0 {
-            visibility = false
-        } else {
-            visibility = true
-        }
         pos := grid.cell_positions[i]
         pos.x += SQUARE_SPACING + OUTLINE_WIDTH
         pos.y += SQUARE_SPACING + OUTLINE_WIDTH
-        square_render := Renderable{square_color_i, pos, grid.cell_size - SQUARE_SPACING - OUTLINE_WIDTH, grid.cell_size - SQUARE_SPACING - OUTLINE_WIDTH, visibility, true}
-        square_outline := create_outline_renderable(square_render, OUTLINE_WIDTH, OUTLINE_COLOR, &colors)
+        square_render := Renderable{square_color_i, pos, grid.cell_size - SQUARE_SPACING - OUTLINE_WIDTH, grid.cell_size - SQUARE_SPACING - OUTLINE_WIDTH, true, true}
         square_render_i := insert_entity(square_render, &render_order.arr[1].arr)
-        square_outline_i := insert_entity(square_outline, &render_order.arr[0].arr)
         square_entity := SquareEntity{square_render_i, rand_arr[i], {}, true}
         index := insert_entity(square_entity, &squares.arr)
     }
     
     for !rl.WindowShouldClose() {
 
-        //Rendering
+        //Assign directions and visibility for squares based on zero number location.
+        zero_index := determine_empty_square(grid, &squares)
+        zero_render_i := squares.arr[zero_index].render_index
+        render_order.arr[1].arr[zero_render_i].visibility = false
+
+        //Rendering Start
         rl.BeginDrawing()
         rl.ClearBackground({76, 53, 83, 255})
 
@@ -93,11 +90,12 @@ main :: proc() {
 
         font := rl.GetFontDefault()
 
-        //Draw Grid
+        //Draw Grid.
         grid_render := retrieve_entity(grid.render_index, renderable.arr)
         grid_rec := renderable_to_rectangle(grid_render)
         rl.DrawRectangleRec(grid_rec, colors.arr[grid_render.color_index])
 
+        //Draw Squares.
         for o in render_order.arr {
             for r in o.arr {
                 if r.visibility && r.active {
@@ -107,6 +105,7 @@ main :: proc() {
             }
         }
 
+        //Draw Text and Square Clicks.
         for s in squares.arr {
             if render_order.arr[1].arr[s.render_index].visibility && s.active {
                 square_render := retrieve_entity(s.render_index, render_order.arr[1].arr)
@@ -165,7 +164,7 @@ create_outline_renderable :: proc(render: Renderable, thick: f32, color: rl.Colo
     }
 }
 
-create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: DirectionSet, ) -> (SquareEntity) {
+create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: [Direction]bool, ) -> (SquareEntity) {
     color_index := insert_color(color, &colors.arr)
     render := Renderable{color_index, {x, y}, w, h, visiblity, true}
     render_index := insert_entity(render, &renderable.arr)
@@ -235,6 +234,39 @@ insert_color :: proc(val: rl.Color, arr: ^[dynamic]rl.Color) -> (index: int) {
     }
 }
 
+determine_empty_square :: proc(grid: GridEntity, squares: ^SquareManager) -> (int) {
+    index : int
+    for i := 0; i < len(squares.arr); i += 1 {
+        if squares.arr.number[i] == 0 {
+            index = i
+        }
+    }
+    
+    north, south, east, west : int
+    north = index - grid.column_size
+    south = index + grid.column_size
+    east = index + 1
+    west = index - 1
+
+    if north >= 0 {
+        s := &squares.arr[north]
+        s.direction[.South] = true
+    }
+    if south <= len(squares.arr) - 1 {
+        s := &squares.arr[south]
+        s.direction[.North] = true
+    }
+    if index % grid.column_size != grid.column_size - 1 {
+        s := &squares.arr[east]
+        s.direction[.West] = true
+    }
+    if index % grid.column_size != 0 {
+        s := &squares.arr[west]
+        s.direction[.East] = true
+    }
+    return index
+}
+
 retrieve_entity :: proc(index: int, arr: #soa[dynamic]$T) -> (T) {
     return arr[index]
 }
@@ -273,7 +305,7 @@ RenderManager :: struct {
 SquareEntity :: struct {
     render_index : int,
     number : int,
-    direction : DirectionSet,
+    direction : [Direction]bool,
     active : bool
 }
 
@@ -293,6 +325,5 @@ RenderOrderManager :: struct {
     arr : [dynamic]RenderManager
 }
 
-Direction :: enum{North, East, South, West}
-DirectionSet :: bit_set[Direction]
+Direction :: enum {North, East, South, West}
 
