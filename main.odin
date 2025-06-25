@@ -8,6 +8,7 @@ import "core:fmt"
 import "core:strconv"
 import "core:strings"
 import "core:log"
+import "core:mem"
 
 //Constants
 WINDOW_SIZE :: 1000
@@ -42,6 +43,27 @@ num_buf : [8]byte
 
 
 main :: proc() {
+
+        when ODIN_DEBUG {
+        track: mem.Tracking_Allocator
+        mem.tracking_allocator_init(&track, context.allocator)
+        context.allocator = mem.tracking_allocator(&track)
+
+        defer {
+            if len(track.allocation_map) > 0 {
+                for _, entry in track.allocation_map {
+                    fmt.eprintf("%v leaked %v bytes\n", entry.location, entry.size)
+                }
+            }
+            if len(track.bad_free_array) > 0 {
+                for entry in track.bad_free_array {
+                    fmt.eprintf("%v bad free at %v\n", entry.location, entry.memory)
+                }
+            }
+            mem.tracking_allocator_destroy(&track)
+        }
+    }
+
     context.logger = log.create_console_logger()
     log.info("Program started")
 
@@ -117,7 +139,7 @@ main :: proc() {
                 cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.number))
                 DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
                 if ButtonClickRec(square_render) {
-                    log.info(s, "Clicked")
+                    log.info(s)
                 }
             }
         }
