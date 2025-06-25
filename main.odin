@@ -27,6 +27,8 @@ OUTLINE_COLOR :: rl.BLACK
 FONT_SIZE :: f32(18)
 FONT_SPACING :: f32(1)
 FONT_COLOR :: rl.BLACK
+OUTLINE_LAYER :: 0
+SQUARE_LAYER :: 1
 
 //Globals
 squares : SquareManager
@@ -46,7 +48,7 @@ main :: proc() {
     rl.SetConfigFlags({.VSYNC_HINT})
     rl.InitWindow(WINDOW_SIZE, WINDOW_SIZE, "15 Puzzle")
 
-    append(&render_order.arr, outlines, renderable )
+    append(&render_order.arr, outlines, renderable)
 
     grid_color_i := insert_color(GRID_COLOR, &colors.arr)
     square_color_i := insert_color(SQUARE_COLOR, &colors.arr)
@@ -71,6 +73,8 @@ main :: proc() {
         square_entity := SquareEntity{square_render_i, rand_arr[i], {}, true}
         index := insert_entity(square_entity, &squares.arr)
     }
+
+    log.info(colors)
     
     for !rl.WindowShouldClose() {
 
@@ -164,7 +168,7 @@ create_outline_renderable :: proc(render: Renderable, thick: f32, color: rl.Colo
     }
 }
 
-create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: [Direction]bool, ) -> (SquareEntity) {
+create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: DirectionSet, ) -> (SquareEntity) {
     color_index := insert_color(color, &colors.arr)
     render := Renderable{color_index, {x, y}, w, h, visiblity, true}
     render_index := insert_entity(render, &renderable.arr)
@@ -250,19 +254,19 @@ determine_empty_square :: proc(grid: GridEntity, squares: ^SquareManager) -> (in
 
     if north >= 0 {
         s := &squares.arr[north]
-        s.direction[.South] = true
+        s.direction += {.South}
     }
     if south <= len(squares.arr) - 1 {
         s := &squares.arr[south]
-        s.direction[.North] = true
+        s.direction += {.North}
     }
     if index % grid.column_size != grid.column_size - 1 {
         s := &squares.arr[east]
-        s.direction[.West] = true
+        s.direction += {.West}
     }
     if index % grid.column_size != 0 {
         s := &squares.arr[west]
-        s.direction[.East] = true
+        s.direction += {.East}
     }
     return index
 }
@@ -305,7 +309,7 @@ RenderManager :: struct {
 SquareEntity :: struct {
     render_index : int,
     number : int,
-    direction : [Direction]bool,
+    direction : DirectionSet,
     active : bool
 }
 
@@ -326,4 +330,5 @@ RenderOrderManager :: struct {
 }
 
 Direction :: enum {North, East, South, West}
+DirectionSet :: bit_set[Direction]
 
