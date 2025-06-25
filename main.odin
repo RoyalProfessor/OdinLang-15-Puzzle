@@ -113,24 +113,11 @@ main :: proc() {
                 rec := renderable_to_rectangle(square_render)
                 cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.number))
                 DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
+                if ButtonClickRec(square_render) {
+                    log.info(s, "Clicked")
+                }
             }
         }
-
-        // //Draw Squares
-        // for s in squares.arr {
-        //     if renderable.arr[s.render_index].visibility == true {
-        //         square_render := retrieve_entity(s.render_index, renderable.arr)
-        //         cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.number))
-        //         if s.active {
-        //             rec := renderable_to_rectangle(square_render)
-        //             rl.DrawRectangleRec(rec, SQUARE_COLOR)
-        //             DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
-        //             if ButtonClickRec(square_render) {
-        //                 log.info(s, "Clicked")
-        //             }
-        //         }
-        //     }
-        // }
 
         rl.EndDrawing()
 
