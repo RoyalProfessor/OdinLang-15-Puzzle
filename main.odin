@@ -12,7 +12,8 @@ import "core:log"
 //Constants
 WINDOW_SIZE :: 1000
 CELL_SIZE :: 20
-SQUARE_SPACING :: f32(.5)
+SQUARE_SPACING :: f32(1)
+OUTLINE_WIDTH :: f32(.5)
 CANVAS_WIDTH :: CELL_SIZE * COLUMN_SIZE
 CANVAS_HEIGHT :: CELL_SIZE * ROW_SIZE
 CANVAS_AREA :: CANVAS_WIDTH * CANVAS_HEIGHT
@@ -22,6 +23,7 @@ ROW_SIZE :: 4
 COLUMN_SIZE :: 4
 SQUARE_COLOR :: rl.Color{173,216,230,255}
 GRID_COLOR :: rl.Color{212,188,114,255}
+OUTLINE_COLOR :: rl.BLACK
 FONT_SIZE :: f32(18)
 FONT_SPACING :: f32(1)
 FONT_COLOR :: rl.BLACK
@@ -29,7 +31,9 @@ FONT_COLOR :: rl.BLACK
 //Globals
 squares : SquareManager
 renderable : RenderManager
+outlines : RenderManager
 colors : ColorManager
+render_order : RenderOrderManager
 
 //Buffers
 num_buf : [8]byte
@@ -42,8 +46,11 @@ main :: proc() {
     rl.SetConfigFlags({.VSYNC_HINT})
     rl.InitWindow(WINDOW_SIZE, WINDOW_SIZE, "15 Puzzle")
 
+    append(&render_order.arr, outlines, renderable )
+
     grid_color_i := insert_color(GRID_COLOR, &colors.arr)
     square_color_i := insert_color(SQUARE_COLOR, &colors.arr)
+    outline_color_i := insert_color(OUTLINE_COLOR, &colors.arr)
     grid_render := Renderable{grid_color_i, {0, 0}, CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, true, true}
 
     grid : GridEntity
@@ -63,10 +70,12 @@ main :: proc() {
             visibility = true
         }
         pos := grid.cell_positions[i]
-        pos.x += SQUARE_SPACING
-        pos.y += SQUARE_SPACING
-        square_render := Renderable{square_color_i, pos, grid.cell_size - SQUARE_SPACING, grid.cell_size - SQUARE_SPACING, visibility, true}
-        square_render_i := insert_entity(square_render, &renderable.arr)
+        pos.x += SQUARE_SPACING + OUTLINE_WIDTH
+        pos.y += SQUARE_SPACING + OUTLINE_WIDTH
+        square_render := Renderable{square_color_i, pos, grid.cell_size - SQUARE_SPACING - OUTLINE_WIDTH, grid.cell_size - SQUARE_SPACING - OUTLINE_WIDTH, visibility, true}
+        square_outline := create_outline_renderable(square_render, OUTLINE_WIDTH, OUTLINE_COLOR, &colors)
+        square_render_i := insert_entity(square_render, &render_order.arr[1].arr)
+        square_outline_i := insert_entity(square_outline, &render_order.arr[0].arr)
         square_entity := SquareEntity{square_render_i, rand_arr[i], {}, true}
         index := insert_entity(square_entity, &squares.arr)
     }
@@ -89,21 +98,39 @@ main :: proc() {
         grid_rec := renderable_to_rectangle(grid_render)
         rl.DrawRectangleRec(grid_rec, colors.arr[grid_render.color_index])
 
-        //Draw Squares
-        for s in squares.arr {
-            if renderable.arr[s.render_index].visibility == true {
-                square_render := retrieve_entity(s.render_index, renderable.arr)
-                cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.number))
-                if s.active {
-                    rec := renderable_to_rectangle(square_render)
-                    rl.DrawRectangleRec(rec, SQUARE_COLOR)
-                    DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
-                    if ButtonClickRec(square_render) {
-                        log.info(s, "Clicked")
-                    }
+        for o in render_order.arr {
+            for r in o.arr {
+                if r.visibility && r.active {
+                    rec := renderable_to_rectangle(r)
+                    rl.DrawRectangleRec(rec, colors.arr[r.color_index])
                 }
             }
         }
+
+        for s in squares.arr {
+            if render_order.arr[1].arr[s.render_index].visibility && s.active {
+                square_render := retrieve_entity(s.render_index, render_order.arr[1].arr)
+                rec := renderable_to_rectangle(square_render)
+                cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.number))
+                DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
+            }
+        }
+
+        // //Draw Squares
+        // for s in squares.arr {
+        //     if renderable.arr[s.render_index].visibility == true {
+        //         square_render := retrieve_entity(s.render_index, renderable.arr)
+        //         cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.number))
+        //         if s.active {
+        //             rec := renderable_to_rectangle(square_render)
+        //             rl.DrawRectangleRec(rec, SQUARE_COLOR)
+        //             DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
+        //             if ButtonClickRec(square_render) {
+        //                 log.info(s, "Clicked")
+        //             }
+        //         }
+        //     }
+        // }
 
         rl.EndDrawing()
 
@@ -137,6 +164,18 @@ DrawCenterText :: proc(font: rl.Font, rec: rl.Rectangle, text: cstring, fontSize
     center_y = center_y - offset_y
     v2 := rl.Vector2{center_x, center_y}
     rl.DrawTextEx(font, text, v2, fontSize, fontSpacing, color)
+}
+
+create_outline_renderable :: proc(render: Renderable, thick: f32, color: rl.Color, colors: ^ColorManager) -> (Renderable) {
+    return {
+        color_index = insert_color(color, &colors.arr),
+        x = render.x - thick,
+        y = render.y - thick,
+        width = render.width + (2*thick),
+        height = render.height + (2*thick),
+        visibility = render.visibility,
+        active = true
+    }
 }
 
 create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: DirectionSet, ) -> (SquareEntity) {
@@ -261,6 +300,10 @@ GridEntity :: struct {
     row_size : int,
     cell_size : f32,
     cell_positions : #soa[dynamic]Position,
+}
+
+RenderOrderManager :: struct {
+    arr : [dynamic]RenderManager
 }
 
 Direction :: enum{North, East, South, West}
