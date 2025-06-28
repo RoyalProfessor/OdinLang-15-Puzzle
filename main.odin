@@ -164,15 +164,15 @@ DrawCenterText :: proc(font: rl.Font, rec: rl.Rectangle, text: cstring, fontSize
     rl.DrawTextEx(font, text, v2, fontSize, fontSpacing, color)
 }
 
-create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: DirectionSet) -> (SquareEntity) {
+create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: DirectionSet) -> (int) {
     render := Renderable{color, {x, y}, w, h, visiblity}
     data := SquareData{num, direction}
     square := SquareEntity{render, data}
     square_index := insert_entity(square, &squares.arr)
-    return square
+    return square_index
 }
 
-create_square_from_struct :: proc(render: Renderable, square: SquareEntity) -> (SquareEntity) {
+create_square_from_struct :: proc(render: Renderable, square: SquareEntity) -> (int) {
     return create_square_raw(render.x, render.y, render.width, render.height, render.color, render.visibility, square.data.number, square.data.direction)
 }
 
@@ -190,9 +190,9 @@ create_grid_raw :: proc(x, y, width, height: f32, color: rl.Color, visibility: b
     grid.row_size = row_size
     grid.cell_size = cell_size
 
-    grid_y: f32 = 0
+    grid_y: f32 = y
     for r := 0; r < row_size; r += 1 {
-        grid_x : f32 = 0
+        grid_x : f32 = x
         for c := 0; c < column_size; c += 1 {
             pos := Position{grid_x, grid_y}
             pos_i := append(&grid.cell_positions, pos)
