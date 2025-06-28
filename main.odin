@@ -15,16 +15,19 @@ import "base:runtime"
 WINDOW_SIZE :: 1000
 CELL_SIZE :: 20
 SQUARE_SPACING :: f32(1)
-OUTLINE_WIDTH :: f32(.5)
+SQUARE_OUTLINE :: f32(.2)
+GRID_OUTLINE :: f32(.15)
 CANVAS_WIDTH :: CELL_SIZE * COLUMN_SIZE
 CANVAS_HEIGHT :: CELL_SIZE * ROW_SIZE
 CANVAS_AREA :: CANVAS_WIDTH * CANVAS_HEIGHT
-ZOOM_MULTIPLIER :: 12
+ZOOM_MULTIPLIER :: WINDOW_SIZE / CANVAS_WIDTH
 NUM_OF_SQUARES :: ROW_SIZE * COLUMN_SIZE
+GRID_POSITION :: Position{0, 0}
 ROW_SIZE :: 4
 COLUMN_SIZE :: 4
 SQUARE_COLOR :: rl.Color{173,216,230,255}
 GRID_COLOR :: rl.Color{212,188,114,255}
+BACKGROUND_COLOR :: rl.Color{132, 110, 40, 255}
 OUTLINE_COLOR :: rl.BLACK
 FONT_SIZE :: f32(18)
 FONT_SPACING :: f32(1)
@@ -73,7 +76,7 @@ main :: proc() {
 
     append(&render_order.arr, outlines, renderable)
 
-    grid_render := Renderable{GRID_COLOR, {0, 0}, CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, true}
+    grid_render := Renderable{GRID_COLOR, GRID_POSITION, CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, true}
 
     grid : GridEntity
     grid = create_grid(grid_render, COLUMN_SIZE, ROW_SIZE, CELL_SIZE)
@@ -86,9 +89,9 @@ main :: proc() {
 
     for i := 0; i < NUM_OF_SQUARES; i += 1 {
         pos := grid.cell_positions[i]
-        pos.x += SQUARE_SPACING + OUTLINE_WIDTH
-        pos.y += SQUARE_SPACING + OUTLINE_WIDTH
-        square_render := Renderable{SQUARE_COLOR, pos, grid.cell_size - SQUARE_SPACING - OUTLINE_WIDTH, grid.cell_size - SQUARE_SPACING - OUTLINE_WIDTH, true}
+        pos.x += SQUARE_SPACING
+        pos.y += SQUARE_SPACING
+        square_render := Renderable{SQUARE_COLOR, pos, grid.cell_size - SQUARE_SPACING, grid.cell_size - SQUARE_SPACING, true}
         square_data := SquareData{rand_arr[i], {}}
         square_entity := SquareEntity{square_render, square_data}
         index := insert_entity(square_entity, &squares.arr)
@@ -96,13 +99,19 @@ main :: proc() {
     
     for !rl.WindowShouldClose() {
 
+        //Reset Square Visibility and Direction.
+        for &s in squares.arr {
+            s.render.visibility = true
+            s.data.direction = {}
+        }
+
         //Assign directions and visibility for squares based on zero number location.
         zero_index := determine_empty_square(grid, &squares)
         squares.arr[zero_index].render.visibility = false
 
         //Rendering Start
         rl.BeginDrawing()
-        rl.ClearBackground({76, 53, 83, 255})
+        rl.ClearBackground(BACKGROUND_COLOR)
 
         camera := rl.Camera2D {
             zoom = ZOOM_MULTIPLIER
@@ -114,15 +123,16 @@ main :: proc() {
         //Draw Grid.
         grid_rec := renderable_to_rectangle(grid.render)
         rl.DrawRectangleRec(grid_rec, grid.render.color)
+        rl.DrawRectangleLinesEx(grid_rec, GRID_OUTLINE, rl.BLACK)
 
-        //Draw Text and Square Clicks.
+        //Draw Squares, Square Text, and register Square Clicks.
         for i := 0; i < len(squares.arr); i += 1 {
             if squares.arr[i].render.visibility {
                 s := squares.arr[i]
                 rec := renderable_to_rectangle(s.render)
                 cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.data.number))
                 rl.DrawRectangleRec(rec, s.render.color)
-                rl.DrawRectangleLinesEx(rec, OUTLINE_WIDTH, OUTLINE_COLOR)
+                rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE, OUTLINE_COLOR)
                 DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
                 if ButtonClickRec(s.render) {
                     log.info(s)
