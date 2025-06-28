@@ -37,9 +37,7 @@ SQUARE_LAYER :: 1
 
 //Globals
 squares : SquareManager
-renderable : RenderManager
-outlines : RenderManager
-render_order : RenderOrderManager
+zero_index : int
 
 //Buffers
 num_buf : [8]byte
@@ -47,7 +45,7 @@ num_buf : [8]byte
 
 main :: proc() {
 
-        when ODIN_DEBUG {
+    when ODIN_DEBUG {
         track: mem.Tracking_Allocator
         mem.tracking_allocator_init(&track, context.allocator)
         context.allocator = mem.tracking_allocator(&track)
@@ -71,10 +69,7 @@ main :: proc() {
 
     rl.SetConfigFlags({.VSYNC_HINT})
     rl.InitWindow(WINDOW_SIZE, WINDOW_SIZE, "15 Puzzle")
-
     log.info("Program started")
-
-    append(&render_order.arr, outlines, renderable)
 
     grid_render := Renderable{GRID_COLOR, GRID_POSITION, CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, true}
 
@@ -91,10 +86,11 @@ main :: proc() {
         pos := grid.cell_positions[i]
         pos.x += SQUARE_SPACING
         pos.y += SQUARE_SPACING
-        square_render := Renderable{SQUARE_COLOR, pos, grid.cell_size - SQUARE_SPACING, grid.cell_size - SQUARE_SPACING, true}
-        square_data := SquareData{rand_arr[i], {}}
-        square_entity := SquareEntity{square_render, square_data}
-        index := insert_entity(square_entity, &squares.arr)
+        width := grid.cell_size - SQUARE_SPACING
+        height := grid.cell_size - SQUARE_SPACING
+        direction := DirectionSet{}
+        square := create_square(pos.x, pos.y, width, height, SQUARE_COLOR, true, rand_arr[i], direction)
+        index := insert_entity_soa(square, &squares.arr)
     }
     
     for !rl.WindowShouldClose() {
@@ -106,7 +102,7 @@ main :: proc() {
         }
 
         //Assign directions and visibility for squares based on zero number location.
-        zero_index := determine_empty_square(grid, &squares)
+        zero_index = assign_directions(grid, &squares)
         squares.arr[zero_index].render.visibility = false
 
         //Rendering Start
@@ -134,20 +130,24 @@ main :: proc() {
                 rl.DrawRectangleRec(rec, s.render.color)
                 rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE, OUTLINE_COLOR)
                 DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
-                if ButtonClickRec(s.render) {
-                    log.info(s)
+                if ButtonClickRender(s.render) {
+                    if s.data.direction != {} {
+                        log.info(s)
+                        swap_numbers_soa(zero_index, i, &squares.arr)
+                    }
                 }
             }
         }
 
         rl.EndDrawing()
 
+        free_all(context.temp_allocator)
     }
 
     log.destroy_console_logger(context.logger)
 }
 
-ButtonClickRec :: proc(render: Renderable, line_thick: f32 = 0, mouse_click: rl.MouseButton = rl.MouseButton.LEFT) -> (bool) {
+ButtonClickRender :: proc(render: Renderable, line_thick: f32 = 0, mouse_click: rl.MouseButton = rl.MouseButton.LEFT) -> (bool) {
     mouse_pos := rl.GetMousePosition()
     mouse_x := mouse_pos[0]
     mouse_y := mouse_pos[1]
@@ -174,15 +174,14 @@ DrawCenterText :: proc(font: rl.Font, rec: rl.Rectangle, text: cstring, fontSize
     rl.DrawTextEx(font, text, v2, fontSize, fontSpacing, color)
 }
 
-create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: DirectionSet) -> (int) {
+create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: DirectionSet) -> (SquareEntity) {
     render := Renderable{color, {x, y}, w, h, visiblity}
     data := SquareData{num, direction}
     square := SquareEntity{render, data}
-    square_index := insert_entity(square, &squares.arr)
-    return square_index
+    return square
 }
 
-create_square_from_struct :: proc(render: Renderable, square: SquareEntity) -> (int) {
+create_square_from_struct :: proc(render: Renderable, square: SquareEntity) -> (SquareEntity) {
     return create_square_raw(render.x, render.y, render.width, render.height, render.color, render.visibility, square.data.number, square.data.direction)
 }
 
@@ -219,12 +218,12 @@ create_grid_struct :: proc(render: Renderable, column_size, row_size: int, cell_
 
 create_grid :: proc{create_grid_raw, create_grid_struct}
 
-insert_entity :: proc(val: $T, arr : ^#soa[dynamic]T) -> (index: int) {
+insert_entity_soa :: proc(val: $T, arr : ^#soa[dynamic]T) -> (index: int) {
     append_soa(arr, val)
     return len(arr) - 1
 }
 
-determine_empty_square :: proc(grid: GridEntity, squares: ^SquareManager) -> (int) {
+assign_directions :: proc(grid: GridEntity, squares: ^SquareManager) -> (int) {
     index : int
     for i := 0; i < len(squares.arr); i += 1 {
         if squares.arr[i].data.number == 0 {
@@ -257,7 +256,11 @@ determine_empty_square :: proc(grid: GridEntity, squares: ^SquareManager) -> (in
     return index
 }
 
-retrieve_entity :: proc(index: int, arr: #soa[dynamic]$T) -> (T) {
+swap_numbers_soa :: proc(zero, target: int, arr: ^#soa[dynamic]$T) {
+    arr[zero].data.number, arr[target].data.number = arr[target].data.number, arr[zero].data.number
+}
+
+retrieve_entity_soa :: proc(index: int, arr: #soa[dynamic]$T) -> (T) {
     return arr[index]
 }
 
