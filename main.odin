@@ -26,6 +26,7 @@ GRID_POSITION :: Position{0, 0}
 ROW_SIZE :: 4
 COLUMN_SIZE :: 4
 SQUARE_COLOR :: rl.Color{173,216,230,255}
+CORRECT_SQUARE_COLOR :: rl.GOLD
 GRID_COLOR :: rl.Color{212,188,114,255}
 BACKGROUND_COLOR :: rl.Color{132, 110, 40, 255}
 OUTLINE_COLOR :: rl.BLACK
@@ -127,12 +128,17 @@ main :: proc() {
                 s := squares.arr[i]
                 rec := renderable_to_rectangle(s.render)
                 cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.data.number))
-                rl.DrawRectangleRec(rec, s.render.color)
+                color : rl.Color
+                if i + 1 == s.data.number {
+                    color = CORRECT_SQUARE_COLOR
+                } else {
+                    color = s.render.color
+                }
+                rl.DrawRectangleRec(rec, color)
                 rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE, OUTLINE_COLOR)
                 DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
                 if ButtonClickRender(s.render) {
                     if s.data.direction != {} {
-                        log.info(s)
                         swap_numbers_soa(zero_index, i, &squares.arr)
                     }
                 }
