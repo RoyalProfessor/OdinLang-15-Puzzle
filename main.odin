@@ -39,6 +39,7 @@ SQUARE_LAYER :: 1
 //Globals
 squares : SquareManager
 zero_index : int
+win : bool
 
 //Buffers
 num_buf : [8]byte
@@ -137,12 +138,19 @@ main :: proc() {
                 rl.DrawRectangleRec(rec, color)
                 rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE, OUTLINE_COLOR)
                 DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
-                if ButtonClickRender(s.render) {
+                if ButtonClickRender(s.render) && win == false {
                     if s.data.direction != {} {
                         swap_numbers_soa(zero_index, i, &squares.arr)
                     }
                 }
             }
+        }
+
+        win = check_win_condition(NUM_OF_SQUARES - 1, squares)
+        if win {
+            rec := renderable_to_rectangle(grid.render)
+            rl.DrawRectangleRec(rec, BACKGROUND_COLOR)
+            DrawCenterText(font, rec, "You won!", FONT_SIZE, FONT_SPACING)
         }
 
         rl.EndDrawing()
@@ -178,6 +186,19 @@ DrawCenterText :: proc(font: rl.Font, rec: rl.Rectangle, text: cstring, fontSize
     center_y = center_y - offset_y
     v2 := rl.Vector2{center_x, center_y}
     rl.DrawTextEx(font, text, v2, fontSize, fontSpacing, color)
+}
+
+check_win_condition :: proc(num_of_squares: int, squares: SquareManager) -> (bool) {
+    counter : int
+    for i := 0; i < len(squares.arr); i += 1 {
+        if i + 1 == squares.arr[i].data.number {
+            counter += 1
+        }
+    }
+    if counter == num_of_squares {
+        return true
+    }
+    return false
 }
 
 create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: DirectionSet) -> (SquareEntity) {
