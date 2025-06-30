@@ -142,8 +142,8 @@ main :: proc() {
                 }
                 rl.DrawRectangleRec(rec, color)
                 rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE, OUTLINE_COLOR)
-                DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
-                if ButtonClickRender(s.render, ZOOM_MULTIPLIER) && win == false {
+                draw_center_text(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
+                if button_click_render(s.render, ZOOM_MULTIPLIER) && win == false {
                     if s.data.direction != {} {
                         swap_numbers_soa(zero_index, i, &squares.arr)
                     }
@@ -155,7 +155,7 @@ main :: proc() {
         if win {
             rec := renderable_to_rectangle(grid.render)
             rl.DrawRectangleRec(rec, GRID_COLOR)
-            DrawCenterText(font, rec, "You won!", FONT_SIZE, FONT_SPACING)
+            draw_center_text(font, rec, "You won!", FONT_SIZE, FONT_SPACING)
         }
 
         rl.EndDrawing()
@@ -167,7 +167,7 @@ main :: proc() {
     log.destroy_console_logger(context.logger)
 }
 
-ButtonClickRender :: proc(render: Renderable, zoom: f32, line_thick: f32 = 0, mouse_click: rl.MouseButton = rl.MouseButton.LEFT) -> (bool) {
+button_click_render :: proc(render: Renderable, zoom: f32, line_thick: f32 = 0, mouse_click: rl.MouseButton = rl.MouseButton.LEFT) -> (bool) {
     mouse_pos := rl.GetMousePosition()
     mouse_x := mouse_pos[0]
     mouse_y := mouse_pos[1]
@@ -182,7 +182,7 @@ ButtonClickRender :: proc(render: Renderable, zoom: f32, line_thick: f32 = 0, mo
     }
 }
 
-DrawCenterText :: proc(font: rl.Font, rec: rl.Rectangle, text: cstring, fontSize, fontSpacing: f32, color: rl.Color = rl.BLACK) {
+draw_center_text :: proc(font: rl.Font, rec: rl.Rectangle, text: cstring, fontSize, fontSpacing: f32, color: rl.Color = rl.BLACK) {
     fontWidth := rl.MeasureTextEx(font, text, fontSize, fontSpacing)
     center_x := rec.x + (rec.width/2)
     center_y := rec.y + (rec.height/2)
