@@ -81,6 +81,11 @@ main :: proc() {
     rand_arr : [NUM_OF_SQUARES]int
     for i := 0; i < NUM_OF_SQUARES; i += 1 {
         rand_arr[i] = i
+        // if i != 15 {
+        //     rand_arr[i] = i + 1
+        // } else {
+        //     rand_arr[i] = 0
+        // }
     }
     rand.shuffle(rand_arr[:])
 
@@ -138,7 +143,7 @@ main :: proc() {
                 rl.DrawRectangleRec(rec, color)
                 rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE, OUTLINE_COLOR)
                 DrawCenterText(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
-                if ButtonClickRender(s.render) && win == false {
+                if ButtonClickRender(s.render, ZOOM_MULTIPLIER) && win == false {
                     if s.data.direction != {} {
                         swap_numbers_soa(zero_index, i, &squares.arr)
                     }
@@ -149,7 +154,7 @@ main :: proc() {
         win = check_win_condition(NUM_OF_SQUARES - 1, squares)
         if win {
             rec := renderable_to_rectangle(grid.render)
-            rl.DrawRectangleRec(rec, BACKGROUND_COLOR)
+            rl.DrawRectangleRec(rec, GRID_COLOR)
             DrawCenterText(font, rec, "You won!", FONT_SIZE, FONT_SPACING)
         }
 
@@ -158,17 +163,18 @@ main :: proc() {
         free_all(context.temp_allocator)
     }
 
+    delete(squares.arr)
     log.destroy_console_logger(context.logger)
 }
 
-ButtonClickRender :: proc(render: Renderable, line_thick: f32 = 0, mouse_click: rl.MouseButton = rl.MouseButton.LEFT) -> (bool) {
+ButtonClickRender :: proc(render: Renderable, zoom: f32, line_thick: f32 = 0, mouse_click: rl.MouseButton = rl.MouseButton.LEFT) -> (bool) {
     mouse_pos := rl.GetMousePosition()
     mouse_x := mouse_pos[0]
     mouse_y := mouse_pos[1]
-    lower_x := (render.x + line_thick) * ZOOM_MULTIPLIER
-    upper_x := (render.x * ZOOM_MULTIPLIER) + ((render.width - line_thick) * ZOOM_MULTIPLIER)
-    lower_y := (render.y + line_thick) * ZOOM_MULTIPLIER
-    upper_y := (render.y * ZOOM_MULTIPLIER) + ((render.height - line_thick) * ZOOM_MULTIPLIER)
+    lower_x := (render.x + line_thick) * zoom
+    upper_x := (render.x * zoom) + ((render.width - line_thick) * zoom)
+    lower_y := (render.y + line_thick) * zoom
+    upper_y := (render.y * zoom) + ((render.height - line_thick) * zoom)
     if mouse_x >= lower_x && mouse_x <= upper_x && mouse_y >= lower_y && mouse_y <= upper_y && rl.IsMouseButtonPressed(mouse_click) == true {
         return true
     } else {
