@@ -11,16 +11,20 @@ import "core:log"
 import "core:mem"
 import "base:runtime"
 
-//Constants
-WINDOW_SIZE :: 1000
-CELL_SIZE :: 20
-SQUARE_SPACING :: f32(1)
-SQUARE_OUTLINE :: f32(.2)
-GRID_OUTLINE :: f32(.15)
+// Constants
+WINDOW_WIDTH :: 1050
+WINDOW_HEIGHT :: 830
+CELL_SIZE :: 200
+GUI_SCALING :: 10
+SQUARE_SPACING :: f32(1 * GUI_SCALING)
+SQUARE_OUTLINE :: f32(.2 * GUI_SCALING)
+GRID_OUTLINE :: f32(.15 * GUI_SCALING)
 CANVAS_WIDTH :: CELL_SIZE * COLUMN_SIZE
 CANVAS_HEIGHT :: CELL_SIZE * ROW_SIZE
 CANVAS_AREA :: CANVAS_WIDTH * CANVAS_HEIGHT
-ZOOM_MULTIPLIER :: WINDOW_SIZE / CANVAS_WIDTH
+LEFT_ALIGNMENT :: f32(-50)
+
+ZOOM_MULTIPLIER :: 1 //WINDOW_SIZE / CANVAS_WIDTH
 NUM_OF_SQUARES :: ROW_SIZE * COLUMN_SIZE
 GRID_POSITION :: Position{0, 0}
 ROW_SIZE :: 4
@@ -30,8 +34,8 @@ CORRECT_SQUARE_COLOR :: rl.GOLD
 GRID_COLOR :: rl.Color{212,188,114,255}
 BACKGROUND_COLOR :: rl.Color{132, 110, 40, 255}
 OUTLINE_COLOR :: rl.BLACK
-FONT_SIZE :: f32(18)
-FONT_SPACING :: f32(1)
+FONT_SIZE :: CELL_SIZE
+FONT_SPACING :: f32(1 * GUI_SCALING)
 FONT_COLOR :: rl.BLACK
 OUTLINE_LAYER :: 0
 SQUARE_LAYER :: 1
@@ -70,10 +74,15 @@ main :: proc() {
     context.logger = log.create_console_logger()
 
     rl.SetConfigFlags({.VSYNC_HINT})
-    rl.InitWindow(WINDOW_SIZE, WINDOW_SIZE, "15 Puzzle")
+    rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "15 Puzzle")
     log.info("Program started")
 
+    window_center := find_center(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
+    window_center_offset := find_center_offset(CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, window_center)
+    window_center_offset.x += LEFT_ALIGNMENT
     grid_render := Renderable{GRID_COLOR, GRID_POSITION, CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, true}
+
+    log.info(grid_render)
 
     grid : GridEntity
     grid = create_grid(grid_render, COLUMN_SIZE, ROW_SIZE, CELL_SIZE)
@@ -81,11 +90,6 @@ main :: proc() {
     rand_arr : [NUM_OF_SQUARES]int
     for i := 0; i < NUM_OF_SQUARES; i += 1 {
         rand_arr[i] = i
-        // if i != 15 {
-        //     rand_arr[i] = i + 1
-        // } else {
-        //     rand_arr[i] = 0
-        // }
     }
     rand.shuffle(rand_arr[:])
 
@@ -97,22 +101,23 @@ main :: proc() {
         height := grid.cell_size - SQUARE_SPACING
         direction := DirectionSet{}
         square := create_square(pos.x, pos.y, width, height, SQUARE_COLOR, true, rand_arr[i], direction)
+        log.info(square)
         index := insert_entity_soa(square, &squares.arr)
     }
     
     for !rl.WindowShouldClose() {
 
-        //Reset Square Visibility and Direction.
+        // Reset Square Visibility and Direction.
         for &s in squares.arr {
             s.render.visibility = true
             s.data.direction = {}
         }
 
-        //Assign directions and visibility for squares based on zero number location.
+        // Assign directions and visibility for squares based on zero number location.
         zero_index = assign_directions(grid, &squares)
         squares.arr[zero_index].render.visibility = false
 
-        //Rendering Start
+        // Rendering Start
         rl.BeginDrawing()
         rl.ClearBackground(BACKGROUND_COLOR)
 
@@ -123,12 +128,12 @@ main :: proc() {
 
         font := rl.GetFontDefault()
 
-        //Draw Grid.
+        // Draw Grid.
         grid_rec := renderable_to_rectangle(grid.render)
         rl.DrawRectangleRec(grid_rec, grid.render.color)
         rl.DrawRectangleLinesEx(grid_rec, GRID_OUTLINE, rl.BLACK)
 
-        //Draw Squares, Square Text, and register Square Clicks.
+        // Draw Squares, Square Text, and register Square Clicks.
         for i := 0; i < len(squares.arr); i += 1 {
             if squares.arr[i].render.visibility {
                 s := squares.arr[i]
@@ -151,6 +156,7 @@ main :: proc() {
             }
         }
 
+        // Checks win condition
         win = check_win_condition(NUM_OF_SQUARES - 1, squares)
         if win {
             rec := renderable_to_rectangle(grid.render)
@@ -177,9 +183,8 @@ button_click_render :: proc(render: Renderable, zoom: f32, line_thick: f32 = 0, 
     upper_y := (render.y * zoom) + ((render.height - line_thick) * zoom)
     if mouse_x >= lower_x && mouse_x <= upper_x && mouse_y >= lower_y && mouse_y <= upper_y && rl.IsMouseButtonPressed(mouse_click) == true {
         return true
-    } else {
-        return false
     }
+    return false
 }
 
 draw_center_text :: proc(font: rl.Font, rec: rl.Rectangle, text: cstring, fontSize, fontSpacing: f32, color: rl.Color = rl.BLACK) {
@@ -205,6 +210,24 @@ check_win_condition :: proc(num_of_squares: int, squares: SquareManager) -> (boo
         return true
     }
     return false
+}
+
+find_center_pos :: proc(x, y, width, height: f32) -> (center: Position) {
+    center.x = x + (width/2)
+    center.y = y + (height/2)
+    return
+}
+
+find_center_render :: proc(render: Renderable) -> (pos: Position) {
+    return find_center_pos(render.x, render.y, render.width, render.height)
+}
+
+find_center :: proc{find_center_pos, find_center_render}
+
+find_center_offset :: proc(width, height: f32, center: Position) -> (offset: Position) {
+    offset.x = center.x - (width/2)
+    offset.y = center.y - (height/2)
+    return
 }
 
 create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: DirectionSet) -> (SquareEntity) {
