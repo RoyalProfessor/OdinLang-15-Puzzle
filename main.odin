@@ -22,8 +22,7 @@ GRID_OUTLINE :: f32(.15 * GUI_SCALING)
 CANVAS_WIDTH :: CELL_SIZE * COLUMN_SIZE
 CANVAS_HEIGHT :: CELL_SIZE * ROW_SIZE
 CANVAS_AREA :: CANVAS_WIDTH * CANVAS_HEIGHT
-LEFT_ALIGNMENT :: f32(-50)
-
+LEFT_ALIGNMENT :: f32(-110)
 ZOOM_MULTIPLIER :: 1 //WINDOW_SIZE / CANVAS_WIDTH
 NUM_OF_SQUARES :: ROW_SIZE * COLUMN_SIZE
 GRID_POSITION :: Position{0, 0}
@@ -80,7 +79,7 @@ main :: proc() {
     window_center := find_center(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
     window_center_offset := find_center_offset(CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, window_center)
     window_center_offset.x += LEFT_ALIGNMENT
-    grid_render := Renderable{GRID_COLOR, GRID_POSITION, CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, true}
+    grid_render := Renderable{GRID_COLOR, window_center_offset, CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, true}
 
     log.info(grid_render)
 
