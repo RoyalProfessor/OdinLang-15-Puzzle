@@ -145,7 +145,7 @@ main :: proc() {
             if squares.arr[i].render.visibility {
                 s := squares.arr[i]
                 rec := renderable_to_rectangle(s.render)
-                cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.data.number))
+                cstr_num := strings.clone_to_cstring(strconv.itoa(num_buf[:], s.data.number)); defer {delete(cstr_num)}
                 color : rl.Color
                 if i + 1 == s.data.number {
                     color = CORRECT_SQUARE_COLOR
