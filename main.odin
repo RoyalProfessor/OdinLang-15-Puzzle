@@ -32,6 +32,7 @@ SQUARE_COLOR :: rl.Color{173,216,230,255}
 CORRECT_SQUARE_COLOR :: rl.GOLD
 GRID_COLOR :: rl.Color{212,188,114,255}
 BACKGROUND_COLOR :: rl.Color{132, 110, 40, 255}
+WIN_SCREEN_COLOR :: rl.Color{255,255,255,191}
 OUTLINE_COLOR :: rl.BLACK
 FONT_SIZE :: CELL_SIZE
 FONT_SPACING :: f32(1 * GUI_SCALING)
@@ -87,19 +88,19 @@ main :: proc() {
     grid : GridEntity
     grid = create_grid(grid_render, COLUMN_SIZE, ROW_SIZE, CELL_SIZE)
 
-    //Creates array of numbers.
+    // Creates array of numbers.
     rand_arr : [NUM_OF_SQUARES]int
     for i := 0; i < NUM_OF_SQUARES; i += 1 {
         rand_arr[i] = i
     }
 
-    //Shuffles numbers until valid state.
+    // Shuffles numbers until valid state.
     for solvable == false {
         rand.shuffle(rand_arr[:])
         solvable = check_solvability(COLUMN_SIZE, rand_arr[:])
     }
 
-    //Create Squares for each cell position and number
+    // Create Squares for each cell position and number
     for i := 0; i < NUM_OF_SQUARES; i += 1 {
         pos := grid.cell_positions[i]
         pos.x += SQUARE_SPACING
@@ -166,7 +167,7 @@ main :: proc() {
         win = check_win_condition(NUM_OF_SQUARES - 1, squares)
         if win {
             rec := renderable_to_rectangle(grid.render)
-            rl.DrawRectangleRec(rec, GRID_COLOR)
+            rl.DrawRectangleRec(rec, WIN_SCREEN_COLOR)
             draw_center_text(font, rec, "You won!", FONT_SIZE, FONT_SPACING)
         }
 
