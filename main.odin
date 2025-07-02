@@ -43,6 +43,7 @@ SQUARE_LAYER :: 1
 squares : SquareManager
 zero_index : int
 win : bool
+solvable : bool
 
 //Buffers
 num_buf : [8]byte
@@ -86,12 +87,19 @@ main :: proc() {
     grid : GridEntity
     grid = create_grid(grid_render, COLUMN_SIZE, ROW_SIZE, CELL_SIZE)
 
+    //Creates array of numbers.
     rand_arr : [NUM_OF_SQUARES]int
     for i := 0; i < NUM_OF_SQUARES; i += 1 {
         rand_arr[i] = i
     }
-    rand.shuffle(rand_arr[:])
 
+    //Shuffles numbers until valid state.
+    for solvable == false {
+        rand.shuffle(rand_arr[:])
+        solvable = check_solvability(COLUMN_SIZE, rand_arr[:])
+    }
+
+    //Create Squares for each cell position and number
     for i := 0; i < NUM_OF_SQUARES; i += 1 {
         pos := grid.cell_positions[i]
         pos.x += SQUARE_SPACING
@@ -100,7 +108,6 @@ main :: proc() {
         height := grid.cell_size - SQUARE_SPACING
         direction := DirectionSet{}
         square := create_square(pos.x, pos.y, width, height, SQUARE_COLOR, true, rand_arr[i], direction)
-        log.info(square)
         index := insert_entity_soa(square, &squares.arr)
     }
     
@@ -196,6 +203,68 @@ draw_center_text :: proc(font: rl.Font, rec: rl.Rectangle, text: cstring, fontSi
     center_y = center_y - offset_y
     v2 := rl.Vector2{center_x, center_y}
     rl.DrawTextEx(font, text, v2, fontSize, fontSpacing, color)
+}
+
+check_solvability :: proc(n: int, arr: []int) -> (bool) {
+    counter : int
+    even := n % 2 == 0
+    zero_even, found : bool
+    grid : [dynamic][dynamic]int
+    j : int
+    for i := 0; i < n; i += 1 {
+        append(&grid, slice.to_dynamic(arr[j:j+n]))
+        j += n
+    }
+
+    if even == false {
+        for i := 0; i < len(arr); i += 1 {
+            if arr[i] != 0 {
+                counter += count_inversion(arr[i], arr[i+1:])
+            }
+        }
+        if counter % 2 == 0 {
+            return true
+        } else {
+            return false
+        }
+    }
+    else if even {
+        for i := 0; i < n; i += 1 {
+            found := slice.any_of(grid[i][:], 0)
+            if found {
+                if (n-i) % 2 == 0 {
+                    zero_even = false
+                } else {
+                    zero_even = true
+                }
+            }
+        }
+        for i := 0; i < len(arr); i += 1 {
+            if arr[i] != 0 {
+                counter += count_inversion(arr[i], arr[i+1:])
+            }
+        }
+        if zero_even == false && counter % 2 == 0 {
+            return true
+        }
+        else if zero_even && counter % 2 != 0 {
+            return true
+        } else {
+            return false
+        }
+    } else {
+        return false
+    }
+}
+
+count_inversion :: proc(number: int, arr: []int) -> (int) {
+    counter : int
+    for i in arr {
+        if number > i {
+            counter += 1
+        }
+    }
+    return counter
 }
 
 check_win_condition :: proc(num_of_squares: int, squares: SquareManager) -> (bool) {
