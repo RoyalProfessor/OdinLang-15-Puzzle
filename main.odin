@@ -83,8 +83,6 @@ main :: proc() {
     window_center_offset.x += LEFT_ALIGNMENT
     grid_render := Renderable{GRID_COLOR, window_center_offset, CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, true}
 
-    log.info(grid_render)
-
     grid : GridEntity
     grid = create_grid(grid_render, COLUMN_SIZE, ROW_SIZE, CELL_SIZE)
 
@@ -111,6 +109,9 @@ main :: proc() {
         square := create_square(pos.x, pos.y, width, height, SQUARE_COLOR, true, rand_arr[i], direction)
         index := insert_entity_soa(square, &squares.arr)
     }
+
+    // Create Move Counter for Side Panel.
+
     
     for !rl.WindowShouldClose() {
 
@@ -370,10 +371,6 @@ Renderable :: struct {
     visibility : bool,
 }
 
-RenderManager :: struct {
-    arr : [dynamic]Renderable
-}
-
 SquareData :: struct {
     number : int,
     direction : DirectionSet
@@ -394,10 +391,6 @@ GridEntity :: struct {
     row_size : int,
     cell_size : f32,
     cell_positions : [dynamic]Position,
-}
-
-RenderOrderManager :: struct {
-    arr : [dynamic]RenderManager
 }
 
 Direction :: enum {North, East, South, West}
