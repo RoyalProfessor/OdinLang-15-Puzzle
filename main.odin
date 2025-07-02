@@ -206,54 +206,23 @@ draw_center_text :: proc(font: rl.Font, rec: rl.Rectangle, text: cstring, fontSi
 }
 
 check_solvability :: proc(n: int, arr: []int) -> (bool) {
-    counter : int
-    even := n % 2 == 0
-    zero_even, found : bool
-    grid : [dynamic][dynamic]int
-    j : int
-    for i := 0; i < n; i += 1 {
-        append(&grid, slice.to_dynamic(arr[j:j+n]))
-        j += n
-    }
+    counter, zero_index : int
+    n_even, zero_even, inversion_even, found : bool
+    n_even = n % 2 == 0
 
-    if even == false {
-        for i := 0; i < len(arr); i += 1 {
-            if arr[i] != 0 {
-                counter += count_inversion(arr[i], arr[i+1:])
-            }
-        }
-        if counter % 2 == 0 {
-            return true
-        } else {
-            return false
+    for i := 0; i < len(arr); i += 1 {
+        if arr[i] != 0 {
+            counter += count_inversion(arr[i], arr[i+1:])
         }
     }
-    else if even {
-        for i := 0; i < n; i += 1 {
-            found := slice.any_of(grid[i][:], 0)
-            if found {
-                if (n-i) % 2 == 0 {
-                    zero_even = false
-                } else {
-                    zero_even = true
-                }
-            }
-        }
-        for i := 0; i < len(arr); i += 1 {
-            if arr[i] != 0 {
-                counter += count_inversion(arr[i], arr[i+1:])
-            }
-        }
-        if zero_even == false && counter % 2 == 0 {
-            return true
-        }
-        else if zero_even && counter % 2 != 0 {
-            return true
-        } else {
-            return false
-        }
+    inversion_even = counter % 2 == 0
+
+    if n_even == false {
+        return counter % 2 == 0
     } else {
-        return false
+        zero_index, found = slice.linear_search(arr, 0)
+        zero_even = (n - (zero_index/n)) % 2 != 0
+        return zero_even != inversion_even
     }
 }
 
