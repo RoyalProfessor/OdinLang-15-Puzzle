@@ -42,9 +42,11 @@ SQUARE_LAYER :: 1
 
 //Globals
 squares : SquareManager
+side_panel : SidePanel
 zero_index : int
 win : bool
 solvable : bool
+counter : int
 
 //Buffers
 num_buf : [8]byte
@@ -75,7 +77,7 @@ main :: proc() {
     context.logger = log.create_console_logger()
 
     rl.SetConfigFlags({.VSYNC_HINT})
-    rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "15 Puzzle")
+    rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "15 Puzzle") 
     log.info("Program started")
 
     window_center := find_center(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -85,6 +87,21 @@ main :: proc() {
 
     grid : GridEntity
     grid = create_grid(grid_render, COLUMN_SIZE, ROW_SIZE, CELL_SIZE)
+
+    counter_heading_label := Label{
+        font = FontDetails{FONT_COLOR, 25},
+        position = Position{grid.render.x + grid.render.width + 20, grid.render.y},
+        text = "Move Counter:"
+    }
+
+    counter_label := Label{
+        font = FontDetails{FONT_COLOR, 25},
+        position = {},
+        text = ""
+    }
+
+    append(&side_panel.labels, counter_heading_label, counter_label)
+    counter_label_i := 1
 
     // Creates array of numbers.
     rand_arr : [NUM_OF_SQUARES]int
@@ -109,9 +126,6 @@ main :: proc() {
         square := create_square(pos.x, pos.y, width, height, SQUARE_COLOR, true, rand_arr[i], direction)
         index := insert_entity_soa(square, &squares.arr)
     }
-
-    // Create Move Counter for Side Panel.
-
     
     for !rl.WindowShouldClose() {
 
@@ -159,9 +173,17 @@ main :: proc() {
                 if button_click_render(s.render, ZOOM_MULTIPLIER) && win == false {
                     if s.data.direction != {} {
                         swap_numbers_soa(zero_index, i, &squares.arr)
+                        counter += 1
                     }
                 }
             }
+        }
+
+        // Draw Side Panel.
+        side_panel.labels[counter_label_i].position = find_below_position_text(counter_heading_label, font)
+        side_panel.labels[counter_label_i].text = strings.clone_to_cstring(strconv.itoa(num_buf[:], counter)); defer {delete(side_panel.labels[counter_label_i].text)}
+        for l in side_panel.labels {
+            rl.DrawText(l.text, i32(l.position.x), i32(l.position.y), i32(l.font.font_size), l.font.font_color)
         }
 
         // Checks win condition
@@ -178,6 +200,8 @@ main :: proc() {
     }
 
     delete(squares.arr)
+    delete(side_panel.labels)
+    delete(side_panel.buttons)
     log.destroy_console_logger(context.logger)
 }
 
@@ -205,6 +229,12 @@ draw_center_text :: proc(font: rl.Font, rec: rl.Rectangle, text: cstring, fontSi
     center_y = center_y - offset_y
     v2 := rl.Vector2{center_x, center_y}
     rl.DrawTextEx(font, text, v2, fontSize, fontSpacing, color)
+}
+
+find_below_position_text :: proc(heading: Label, font: rl.Font) -> (Position) {
+    font_dimension := rl.MeasureTextEx(font, heading.text, heading.font.font_size, FONT_SPACING)
+    below_y := heading.position.y + font_dimension.y
+    return Position{heading.position.x, below_y}
 }
 
 check_solvability :: proc(n: int, arr: []int) -> (bool) {
@@ -363,6 +393,10 @@ Position :: struct {
     x, y: f32,
 }
 
+Dimensions :: struct {
+    width, height : f32
+}
+
 Renderable :: struct {
     color : rl.Color,
     using position: Position,
@@ -396,3 +430,24 @@ GridEntity :: struct {
 Direction :: enum {North, East, South, West}
 DirectionSet :: bit_set[Direction]
 
+SidePanel :: struct {
+    labels : [dynamic]Label,
+    buttons : [dynamic]Button
+}
+
+Button :: struct {
+    font : FontDetails,
+    render : Renderable,
+    text : cstring,
+}
+
+Label :: struct {
+    font : FontDetails,
+    position : Position,
+    text : cstring,
+}
+
+FontDetails :: struct {
+    font_color : rl.Color,
+    font_size : f32
+}
