@@ -49,7 +49,6 @@ SQUARE_LAYER :: 1
 squares : SquareManager
 zero_index : int
 win : bool
-solvable : bool
 counter : int
 
 //Buffers
@@ -212,11 +211,7 @@ main :: proc() {
         rl.DrawRectangleLinesEx(restart_rec, SQUARE_OUTLINE, OUTLINE_COLOR)
         draw_center_text(font, restart_rec, "Restart", BUTTON_FONT_SIZE, FONT_SPACING)
         if button_click_render(restart_button.render, ZOOM_MULTIPLIER) {
-            numbers : [dynamic]int; defer {delete(numbers)}
-            for i in 0..< len(squares.arr) {
-                append(&numbers, i)
-            }
-            restart_game(&squares, numbers[:])
+            restart_game(&squares, COLUMN_SIZE)
         }
 
         // Checks win condition
@@ -273,23 +268,25 @@ find_below_position_text :: proc(heading: Label, font: rl.Font) -> (Position) {
     return Position{heading.position.x, below_y}
 }
 
-restart_game :: proc(squares: ^SquareManager, numbers: []int) {
+restart_game :: proc(squares: ^SquareManager, column_size: int) {
     counter = 0
     win = false
-    rand.shuffle(numbers[:])
-    for i in 0..< len(squares.arr) {
-        squares.arr[i].data.number = numbers[i]
+    n := len(squares.arr)
+    rand_arr := create_shuffled_array(n, column_size)
+    for i in 0..< len(rand_arr) {
+        squares.arr[i].data.number = rand_arr[i]
     }
 }
 
 create_shuffled_array :: proc(n, column_size: int) -> ([dynamic]int) {
     // Creates and populates array.
     rand_arr : [dynamic]int; defer{delete(rand_arr)}
+    solvable := false
     for i in 0..< n {
         append(&rand_arr, i)
     }
     // Shuffles numbers until valid state.
-    for solvable == false {
+    for !solvable {
         rand.shuffle(rand_arr[:])
         solvable = check_solvability(COLUMN_SIZE, rand_arr[:])
     }
@@ -297,44 +294,44 @@ create_shuffled_array :: proc(n, column_size: int) -> ([dynamic]int) {
 }
 
 check_solvability :: proc(n: int, arr: []int) -> (bool) {
-    counter, zero_index : int
+    inversion_counter, zero_index : int
     n_even, zero_even, inversion_even, found : bool
     n_even = n % 2 == 0
 
     for i in 0..<len(arr) {
         if arr[i] != 0 {
-            counter += count_inversion(arr[i], arr[i+1:])
+            inversion_counter += count_inversion(arr[i], arr[i+1:])
         }
     }
-    inversion_even = counter % 2 == 0
+    inversion_even = inversion_counter % 2 == 0
 
     if n_even == false {
-        return counter % 2 == 0
+        return inversion_counter % 2 == 0
     } else {
         zero_index, found = slice.linear_search(arr, 0)
         zero_even = (n - (zero_index/n)) % 2 != 0
-        return zero_even != inversion_even
+        return zero_even == inversion_even
     }
 }
 
 count_inversion :: proc(number: int, arr: []int) -> (int) {
-    counter : int
+    inversion_counter : int
     for i in arr {
-        if number > i {
-            counter += 1
+        if number > i && i != 0 {
+            inversion_counter += 1
         }
     }
-    return counter
+    return inversion_counter
 }
 
 check_win_condition :: proc(num_of_squares: int, squares: SquareManager) -> (bool) {
-    counter : int
+    gold_counter : int
     for i in 0..<len(squares.arr) {
         if i + 1 == squares.arr[i].data.number {
-            counter += 1
+            gold_counter += 1
         }
     }
-    if counter == num_of_squares {
+    if gold_counter == num_of_squares {
         return true
     }
     return false
