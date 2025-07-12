@@ -35,7 +35,7 @@ BACKGROUND_COLOR :: rl.Color{132, 110, 40, 255}
 WIN_SCREEN_COLOR :: rl.Color{255,255,255,191}
 OUTLINE_COLOR :: rl.BLACK
 SQUARE_FONT_SIZE :: CELL_SIZE
-LABEL_FONT_SIZE :: f32(25)
+LABEL_FONT_SIZE :: f32(26)
 BUTTON_FONT_SIZE :: f32(25)
 FONT_SPACING :: f32(.3 * GUI_SCALING)
 FONT_COLOR :: rl.BLACK
@@ -124,19 +124,11 @@ main :: proc() {
     }
 
     append(&side_panel.labels, counter_heading_label, counter_label)
+    append(&side_panel.buttons, restart_button)
     counter_label_i := 1
 
-    // Creates array of numbers.
-    rand_arr : [NUM_OF_SQUARES]int
-    for i in 0..< NUM_OF_SQUARES{
-        rand_arr[i] = i
-    }
-
-    // Shuffles numbers until valid state.
-    for solvable == false {
-        rand.shuffle(rand_arr[:])
-        solvable = check_solvability(COLUMN_SIZE, rand_arr[:])
-    }
+    // Creates random number order.
+    rand_arr := create_shuffled_array(NUM_OF_SQUARES, COLUMN_SIZE)
 
     // Create Squares for each cell position and number
     for i in 0..< NUM_OF_SQUARES {
@@ -211,7 +203,12 @@ main :: proc() {
             draw_center_text(font, rec, l.text, l.font.font_size, FONT_SPACING, l.font.font_color)
         }
         for b in side_panel.buttons {
+            rec := renderable_to_rectangle(b.render)
+            rl.DrawRectangleRec(rec, b.render.color)
+            draw_center_text(font, rec, "Restart", BUTTON_FONT_SIZE, FONT_SPACING)
+            if button_click_render(b.render, ZOOM_MULTIPLIER) {
 
+            }
         }
 
         // Checks win condition
@@ -263,6 +260,25 @@ find_below_position_text :: proc(heading: Label, font: rl.Font) -> (Position) {
     font_dimension := rl.MeasureTextEx(font, heading.text, heading.font.font_size, FONT_SPACING)
     below_y := heading.position.y + font_dimension.y
     return Position{heading.position.x, below_y}
+}
+
+restart_game :: proc() {
+    counter = 0
+
+}
+
+create_shuffled_array :: proc(n, column_size: int) -> ([dynamic]int) {
+    // Creates and populates array.
+    rand_arr : [dynamic]int
+    for i in 0..< n {
+        append(&rand_arr, i)
+    }
+    // Shuffles numbers until valid state.
+    for solvable == false {
+        rand.shuffle(rand_arr[:])
+        solvable = check_solvability(COLUMN_SIZE, rand_arr[:])
+    }
+    return rand_arr
 }
 
 check_solvability :: proc(n: int, arr: []int) -> (bool) {
