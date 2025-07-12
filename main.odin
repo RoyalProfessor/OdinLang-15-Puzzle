@@ -20,6 +20,7 @@ SQUARE_SPACING :: f32(1 * GUI_SCALING)
 SQUARE_OUTLINE :: f32(.2 * GUI_SCALING)
 GRID_OUTLINE :: f32(.15 * GUI_SCALING)
 BUTTON_PADDING :: f32(2)
+SIDE_PANEL_PADDING :: f32(10)
 CANVAS_WIDTH :: CELL_SIZE * COLUMN_SIZE
 CANVAS_HEIGHT :: CELL_SIZE * ROW_SIZE
 CANVAS_AREA :: CANVAS_WIDTH * CANVAS_HEIGHT
@@ -36,7 +37,8 @@ BACKGROUND_COLOR :: rl.Color{132, 110, 40, 255}
 WIN_SCREEN_COLOR :: rl.Color{255,255,255,191}
 OUTLINE_COLOR :: rl.BLACK
 SQUARE_FONT_SIZE :: CELL_SIZE
-LABEL_FONT_SIZE :: f32(26)
+COUNTER_HEADING_LABEL_FONT_SIZE :: f32(28)
+COUNTER_LABEL_FONT_SIZE :: f32(27)
 BUTTON_FONT_SIZE :: f32(25)
 FONT_SPACING :: f32(.3 * GUI_SCALING)
 FONT_COLOR :: rl.BLACK
@@ -82,6 +84,7 @@ main :: proc() {
     rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "15 Puzzle") 
     log.info("Program started")
 
+    //Find Grid Position based on window center.
     window_center := find_center(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
     window_center_offset := find_center_offset(CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, window_center)
     window_center_offset.x += LEFT_ALIGNMENT
@@ -96,18 +99,18 @@ main :: proc() {
         render = Renderable{
             color = rl.Color{},
             position = Position{grid.render.x + grid.render.width, grid.render.y},
-            dimension = Dimension{WINDOW_WIDTH - grid.render.width, WINDOW_HEIGHT},
+            dimension = Dimension{WINDOW_WIDTH - grid.render.width - grid.render.x, grid.render.height},
             visibility = true}
     }
 
     // Create Side Panel labels
     counter_heading_label := Label{
-        font = FontDetails{FONT_COLOR, LABEL_FONT_SIZE},
+        font = FontDetails{FONT_COLOR, COUNTER_HEADING_LABEL_FONT_SIZE},
         position = Position{side_panel.render.x + (side_panel.render.width/2), side_panel.render.y + 20},
         text = "Move Counter:"
     }
     counter_label := Label{
-        font = FontDetails{FONT_COLOR, LABEL_FONT_SIZE},
+        font = FontDetails{FONT_COLOR, COUNTER_LABEL_FONT_SIZE},
         position = {},
         text = ""
     }
@@ -117,9 +120,8 @@ main :: proc() {
         font = FontDetails{FONT_COLOR, BUTTON_FONT_SIZE},
         render = Renderable{
             color = rl.WHITE, 
-            position = Position{grid.render.x + grid.render.width + 20, grid.render.y + grid.render.height - 20},
-            width = 50,
-            height = 20,
+            position = Position{side_panel.render.x + SIDE_PANEL_PADDING, side_panel.render.height - 40},
+            dimension = Dimension{side_panel.render.width - (SIDE_PANEL_PADDING*2), 50},
             visibility = true},
         text = "Restart"
     }
@@ -127,6 +129,7 @@ main :: proc() {
     append(&side_panel.labels, counter_heading_label, counter_label)
     append(&side_panel.buttons, restart_button)
     counter_label_i := 1
+    restart_button_i := 0
 
     // Creates random number order.
     rand_arr := create_shuffled_array(NUM_OF_SQUARES, COLUMN_SIZE)
@@ -195,24 +198,25 @@ main :: proc() {
             }
         }
 
-        // Draw Side Panel.
+        // Draw Side Panel Labels.
         side_panel.labels[counter_label_i].position = find_below_position_text(counter_heading_label, font)
         side_panel.labels[counter_label_i].text = strings.clone_to_cstring(strconv.itoa(num_buf[:], counter)); defer {delete(side_panel.labels[counter_label_i].text)}
         for l in side_panel.labels {
             rec := rl.Rectangle{l.position.x, l.position.y, 0,0}
             draw_center_text(font, rec, l.text, l.font.font_size, FONT_SPACING, l.font.font_color)
         }
-        for b in side_panel.buttons {
-            rec := renderable_to_rectangle(b.render)
-            rl.DrawRectangleRec(rec, b.render.color)
-            draw_center_text(font, rec, "Restart", BUTTON_FONT_SIZE, FONT_SPACING)
-            if button_click_render(b.render, ZOOM_MULTIPLIER) {
-                numbers : [dynamic]int; defer {delete(numbers)}
-                for i in 0..< len(squares.arr) {
-                    append(&numbers, i)
-                }
-                restart_game(&squares, numbers[:])
+
+        // Draw Side Panel Restart Button.
+        restart_rec := renderable_to_rectangle(restart_button.render)
+        rl.DrawRectangleRec(restart_rec, restart_button.render.color)
+        rl.DrawRectangleLinesEx(restart_rec, SQUARE_OUTLINE, OUTLINE_COLOR)
+        draw_center_text(font, restart_rec, "Restart", BUTTON_FONT_SIZE, FONT_SPACING)
+        if button_click_render(restart_button.render, ZOOM_MULTIPLIER) {
+            numbers : [dynamic]int; defer {delete(numbers)}
+            for i in 0..< len(squares.arr) {
+                append(&numbers, i)
             }
+            restart_game(&squares, numbers[:])
         }
 
         // Checks win condition
