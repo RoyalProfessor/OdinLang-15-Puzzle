@@ -207,7 +207,7 @@ main :: proc() {
             rl.DrawRectangleRec(rec, b.render.color)
             draw_center_text(font, rec, "Restart", BUTTON_FONT_SIZE, FONT_SPACING)
             if button_click_render(b.render, ZOOM_MULTIPLIER) {
-                numbers : [dynamic]int
+                numbers : [dynamic]int; defer {delete(numbers)}
                 for i in 0..< len(squares.arr) {
                     append(&numbers, i)
                 }
@@ -228,10 +228,13 @@ main :: proc() {
         free_all(context.temp_allocator)
     }
 
-    delete(squares.arr)
-    delete(side_panel.labels)
-    delete(side_panel.buttons)
-    log.destroy_console_logger(context.logger)
+    when ODIN_DEBUG {
+        delete(grid.cell_positions)
+        delete(squares.arr)
+        delete(side_panel.labels)
+        delete(side_panel.buttons)
+        log.destroy_console_logger(context.logger)
+    }
 }
 
 button_click_render :: proc(render: Renderable, zoom: f32, line_thick: f32 = 0, mouse_click: rl.MouseButton = rl.MouseButton.LEFT) -> (bool) {
@@ -277,7 +280,7 @@ restart_game :: proc(squares: ^SquareManager, numbers: []int) {
 
 create_shuffled_array :: proc(n, column_size: int) -> ([dynamic]int) {
     // Creates and populates array.
-    rand_arr : [dynamic]int
+    rand_arr : [dynamic]int; defer{delete(rand_arr)}
     for i in 0..< n {
         append(&rand_arr, i)
     }
