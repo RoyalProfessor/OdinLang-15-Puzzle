@@ -35,6 +35,8 @@ BACKGROUND_COLOR :: rl.Color{132, 110, 40, 255}
 WIN_SCREEN_COLOR :: rl.Color{255,255,255,191}
 OUTLINE_COLOR :: rl.BLACK
 SQUARE_FONT_SIZE :: CELL_SIZE
+LABEL_FONT_SIZE :: f32(25)
+BUTTON_FONT_SIZE :: f32(25)
 FONT_SPACING :: f32(.3 * GUI_SCALING)
 FONT_COLOR :: rl.BLACK
 OUTLINE_LAYER :: 0
@@ -99,19 +101,19 @@ main :: proc() {
 
     // Create Side Panel labels
     counter_heading_label := Label{
-        font = FontDetails{FONT_COLOR, 25},
+        font = FontDetails{FONT_COLOR, LABEL_FONT_SIZE},
         position = Position{side_panel.render.x + (side_panel.render.width/2), side_panel.render.y + 20},
         text = "Move Counter:"
     }
     counter_label := Label{
-        font = FontDetails{FONT_COLOR, 25},
+        font = FontDetails{FONT_COLOR, LABEL_FONT_SIZE},
         position = {},
         text = ""
     }
 
     // Create Side Panel buttons
     restart_button := Button{
-        font = FontDetails{FONT_COLOR, 25},
+        font = FontDetails{FONT_COLOR, BUTTON_FONT_SIZE},
         render = Renderable{
             color = rl.WHITE, 
             position = Position{grid.render.x + grid.render.width + 20, grid.render.y + grid.render.height - 20},
