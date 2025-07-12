@@ -19,6 +19,7 @@ GUI_SCALING :: 10
 SQUARE_SPACING :: f32(1 * GUI_SCALING)
 SQUARE_OUTLINE :: f32(.2 * GUI_SCALING)
 GRID_OUTLINE :: f32(.15 * GUI_SCALING)
+BUTTON_PADDING :: f32(2)
 CANVAS_WIDTH :: CELL_SIZE * COLUMN_SIZE
 CANVAS_HEIGHT :: CELL_SIZE * ROW_SIZE
 CANVAS_AREA :: CANVAS_WIDTH * CANVAS_HEIGHT
@@ -198,7 +199,6 @@ main :: proc() {
         side_panel.labels[counter_label_i].position = find_below_position_text(counter_heading_label, font)
         side_panel.labels[counter_label_i].text = strings.clone_to_cstring(strconv.itoa(num_buf[:], counter)); defer {delete(side_panel.labels[counter_label_i].text)}
         for l in side_panel.labels {
-            // rl.DrawText(l.text, i32(l.position.x), i32(l.position.y), i32(l.font.font_size), l.font.font_color)
             rec := rl.Rectangle{l.position.x, l.position.y, 0,0}
             draw_center_text(font, rec, l.text, l.font.font_size, FONT_SPACING, l.font.font_color)
         }
@@ -207,7 +207,11 @@ main :: proc() {
             rl.DrawRectangleRec(rec, b.render.color)
             draw_center_text(font, rec, "Restart", BUTTON_FONT_SIZE, FONT_SPACING)
             if button_click_render(b.render, ZOOM_MULTIPLIER) {
-
+                numbers : [dynamic]int
+                for i in 0..< len(squares.arr) {
+                    append(&numbers, i)
+                }
+                restart_game(&squares, numbers[:])
             }
         }
 
@@ -262,9 +266,13 @@ find_below_position_text :: proc(heading: Label, font: rl.Font) -> (Position) {
     return Position{heading.position.x, below_y}
 }
 
-restart_game :: proc() {
+restart_game :: proc(squares: ^SquareManager, numbers: []int) {
     counter = 0
-
+    win = false
+    rand.shuffle(numbers[:])
+    for i in 0..< len(squares.arr) {
+        squares.arr[i].data.number = numbers[i]
+    }
 }
 
 create_shuffled_array :: proc(n, column_size: int) -> ([dynamic]int) {
