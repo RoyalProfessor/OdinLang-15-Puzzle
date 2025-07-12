@@ -34,15 +34,14 @@ GRID_COLOR :: rl.Color{212,188,114,255}
 BACKGROUND_COLOR :: rl.Color{132, 110, 40, 255}
 WIN_SCREEN_COLOR :: rl.Color{255,255,255,191}
 OUTLINE_COLOR :: rl.BLACK
-FONT_SIZE :: CELL_SIZE
-FONT_SPACING :: f32(1 * GUI_SCALING)
+SQUARE_FONT_SIZE :: CELL_SIZE
+FONT_SPACING :: f32(.3 * GUI_SCALING)
 FONT_COLOR :: rl.BLACK
 OUTLINE_LAYER :: 0
 SQUARE_LAYER :: 1
 
 //Globals
 squares : SquareManager
-side_panel : SidePanel
 zero_index : int
 win : bool
 solvable : bool
@@ -83,21 +82,43 @@ main :: proc() {
     window_center := find_center(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
     window_center_offset := find_center_offset(CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, window_center)
     window_center_offset.x += LEFT_ALIGNMENT
-    grid_render := Renderable{GRID_COLOR, window_center_offset, CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING, true}
+    grid_render := Renderable{GRID_COLOR, window_center_offset, {CANVAS_WIDTH + SQUARE_SPACING, CANVAS_HEIGHT + SQUARE_SPACING}, true}
 
+    // Create Grid
     grid : GridEntity
     grid = create_grid(grid_render, COLUMN_SIZE, ROW_SIZE, CELL_SIZE)
 
-    counter_heading_label := Label{
-        font = FontDetails{FONT_COLOR, 25},
-        position = Position{grid.render.x + grid.render.width + 20, grid.render.y},
-        text = "Move Counter:"
+    // Create Side Panel
+    side_panel := SidePanel{
+        render = Renderable{
+            color = rl.Color{},
+            position = Position{grid.render.x + grid.render.width, grid.render.y},
+            dimension = Dimension{WINDOW_WIDTH - grid.render.width, WINDOW_HEIGHT},
+            visibility = true}
     }
 
+    // Create Side Panel labels
+    counter_heading_label := Label{
+        font = FontDetails{FONT_COLOR, 25},
+        position = Position{side_panel.render.x + (side_panel.render.width/2), side_panel.render.y + 20},
+        text = "Move Counter:"
+    }
     counter_label := Label{
         font = FontDetails{FONT_COLOR, 25},
         position = {},
         text = ""
+    }
+
+    // Create Side Panel buttons
+    restart_button := Button{
+        font = FontDetails{FONT_COLOR, 25},
+        render = Renderable{
+            color = rl.WHITE, 
+            position = Position{grid.render.x + grid.render.width + 20, grid.render.y + grid.render.height - 20},
+            width = 50,
+            height = 20,
+            visibility = true},
+        text = "Restart"
     }
 
     append(&side_panel.labels, counter_heading_label, counter_label)
@@ -105,7 +126,7 @@ main :: proc() {
 
     // Creates array of numbers.
     rand_arr : [NUM_OF_SQUARES]int
-    for i := 0; i < NUM_OF_SQUARES; i += 1 {
+    for i in 0..< NUM_OF_SQUARES{
         rand_arr[i] = i
     }
 
@@ -116,7 +137,7 @@ main :: proc() {
     }
 
     // Create Squares for each cell position and number
-    for i := 0; i < NUM_OF_SQUARES; i += 1 {
+    for i in 0..< NUM_OF_SQUARES {
         pos := grid.cell_positions[i]
         pos.x += SQUARE_SPACING
         pos.y += SQUARE_SPACING
@@ -156,7 +177,7 @@ main :: proc() {
         rl.DrawRectangleLinesEx(grid_rec, GRID_OUTLINE, rl.BLACK)
 
         // Draw Squares, Square Text, and register Square Clicks.
-        for i := 0; i < len(squares.arr); i += 1 {
+        for i in 0..<len(squares.arr) {
             if squares.arr[i].render.visibility {
                 s := squares.arr[i]
                 rec := renderable_to_rectangle(s.render)
@@ -169,7 +190,7 @@ main :: proc() {
                 }
                 rl.DrawRectangleRec(rec, color)
                 rl.DrawRectangleLinesEx(rec, SQUARE_OUTLINE, OUTLINE_COLOR)
-                draw_center_text(font, rec, cstr_num, FONT_SIZE, FONT_SPACING, FONT_COLOR)
+                draw_center_text(font, rec, cstr_num, SQUARE_FONT_SIZE, FONT_SPACING, FONT_COLOR)
                 if button_click_render(s.render, ZOOM_MULTIPLIER) && win == false {
                     if s.data.direction != {} {
                         swap_numbers_soa(zero_index, i, &squares.arr)
@@ -183,7 +204,12 @@ main :: proc() {
         side_panel.labels[counter_label_i].position = find_below_position_text(counter_heading_label, font)
         side_panel.labels[counter_label_i].text = strings.clone_to_cstring(strconv.itoa(num_buf[:], counter)); defer {delete(side_panel.labels[counter_label_i].text)}
         for l in side_panel.labels {
-            rl.DrawText(l.text, i32(l.position.x), i32(l.position.y), i32(l.font.font_size), l.font.font_color)
+            // rl.DrawText(l.text, i32(l.position.x), i32(l.position.y), i32(l.font.font_size), l.font.font_color)
+            rec := rl.Rectangle{l.position.x, l.position.y, 0,0}
+            draw_center_text(font, rec, l.text, l.font.font_size, FONT_SPACING, l.font.font_color)
+        }
+        for b in side_panel.buttons {
+
         }
 
         // Checks win condition
@@ -191,7 +217,7 @@ main :: proc() {
         if win {
             rec := renderable_to_rectangle(grid.render)
             rl.DrawRectangleRec(rec, WIN_SCREEN_COLOR)
-            draw_center_text(font, rec, "You won!", FONT_SIZE, FONT_SPACING)
+            draw_center_text(font, rec, "You won!", SQUARE_FONT_SIZE, FONT_SPACING)
         }
 
         rl.EndDrawing()
@@ -242,7 +268,7 @@ check_solvability :: proc(n: int, arr: []int) -> (bool) {
     n_even, zero_even, inversion_even, found : bool
     n_even = n % 2 == 0
 
-    for i := 0; i < len(arr); i += 1 {
+    for i in 0..<len(arr) {
         if arr[i] != 0 {
             counter += count_inversion(arr[i], arr[i+1:])
         }
@@ -270,7 +296,7 @@ count_inversion :: proc(number: int, arr: []int) -> (int) {
 
 check_win_condition :: proc(num_of_squares: int, squares: SquareManager) -> (bool) {
     counter : int
-    for i := 0; i < len(squares.arr); i += 1 {
+    for i in 0..<len(squares.arr) {
         if i + 1 == squares.arr[i].data.number {
             counter += 1
         }
@@ -300,7 +326,7 @@ find_center_offset :: proc(width, height: f32, center: Position) -> (offset: Pos
 }
 
 create_square_raw :: proc(x, y, w, h: f32, color: rl.Color, visiblity : bool = true, num : int, direction: DirectionSet) -> (SquareEntity) {
-    render := Renderable{color, {x, y}, w, h, visiblity}
+    render := Renderable{color, {x, y}, {w, h}, visiblity}
     data := SquareData{num, direction}
     square := SquareEntity{render, data}
     return square
@@ -317,7 +343,7 @@ renderable_to_rectangle :: proc(render: Renderable) -> (rl.Rectangle) {
 }
 
 create_grid_raw :: proc(x, y, width, height: f32, color: rl.Color, visibility: bool, column_size, row_size: int, cell_size: f32) -> (GridEntity) {
-    render := Renderable{color, {x, y}, width, height, visibility}
+    render := Renderable{color, {x, y}, {width, height}, visibility}
     grid : GridEntity
     grid.render = render
     grid.column_size = column_size
@@ -393,15 +419,14 @@ Position :: struct {
     x, y: f32,
 }
 
-Dimensions :: struct {
+Dimension :: struct {
     width, height : f32
 }
 
 Renderable :: struct {
     color : rl.Color,
-    using position: Position,
-    width : f32,
-    height : f32,
+    using position : Position,
+    using dimension : Dimension,
     visibility : bool,
 }
 
@@ -431,6 +456,7 @@ Direction :: enum {North, East, South, West}
 DirectionSet :: bit_set[Direction]
 
 SidePanel :: struct {
+    render : Renderable,
     labels : [dynamic]Label,
     buttons : [dynamic]Button
 }
